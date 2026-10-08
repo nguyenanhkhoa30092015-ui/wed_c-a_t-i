@@ -1,0 +1,973 @@
+from pathlib import Path
+import subprocess, re, json, textwrap, os, sys, time
+
+html = r'''<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10131a">
+<title>HTML Code Lab — Coding Academy</title>
+<style>
+:root{
+  --bg:#0b0d12;--panel:#11151d;--panel2:#171b24;--panel3:#1c2230;--text:#f6f7fb;--muted:#9da6b5;
+  --line:rgba(255,255,255,.08);--accent:#ff3b30;--accent2:#3b82f6;--success:#22c55e;--warning:#f59e0b;
+  --danger:#ef4444;--shadow:0 18px 50px rgba(0,0,0,.28);--radius:18px;--sidebar:250px;
+  --mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+}
+:root.light{
+  --bg:#f5f7fb;--panel:#ffffff;--panel2:#f7f8fb;--panel3:#eef1f7;--text:#161a22;--muted:#616b7b;
+  --line:rgba(0,0,0,.09);--shadow:0 16px 40px rgba(24,35,52,.11);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:var(--sidebar);position:fixed;inset:0 auto 0 0;z-index:50;padding:18px 14px;
+  background:linear-gradient(180deg,var(--panel),var(--panel2));border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:16px
+}
+.brand{display:flex;align-items:center;gap:12px;padding:8px 10px 16px;border-bottom:1px solid var(--line)}
+.logo-mark{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#ff7a45);font-weight:900;color:white;box-shadow:0 10px 28px rgba(255,59,48,.25)}
+.brand strong{font-size:15px;letter-spacing:.7px}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.nav{display:grid;gap:7px}.nav button{
+  width:100%;border:0;background:transparent;color:var(--muted);padding:12px 12px;border-radius:12px;text-align:left;
+  display:flex;align-items:center;gap:11px;transition:.2s
+}
+.nav button:hover{background:var(--panel3);color:var(--text);transform:translateX(2px)}
+.nav button.active{background:linear-gradient(90deg,rgba(255,59,48,.16),rgba(59,130,246,.08));color:var(--text);outline:1px solid rgba(255,59,48,.16)}
+.nav .icon{width:24px;text-align:center}
+.side-footer{margin-top:auto;display:grid;gap:10px}
+.user-mini{padding:12px;border-radius:14px;background:var(--panel3);border:1px solid var(--line)}
+.user-mini .top{display:flex;justify-content:space-between;gap:8px}.pill{font-size:11px;padding:4px 7px;border-radius:999px;background:rgba(59,130,246,.14);color:#93c5fd}
+.main{margin-left:var(--sidebar);width:calc(100% - var(--sidebar));min-width:0}
+.topbar{height:70px;padding:12px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(14px)}
+.mobile-menu{display:none}
+.top-actions{display:flex;align-items:center;gap:8px}
+.icon-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:9px 11px}
+.content{padding:24px;max-width:1500px;margin:0 auto}
+.view{display:none;animation:fade .25s ease}.view.active{display:block}
+@keyframes fade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:none}}
+.hero{padding:22px;border:1px solid var(--line);border-radius:22px;background:
+  radial-gradient(circle at 80% 0%,rgba(59,130,246,.16),transparent 30%),
+  radial-gradient(circle at 0% 100%,rgba(255,59,48,.12),transparent 35%),var(--panel);box-shadow:var(--shadow)}
+.hero h1{margin:0 0 8px;font-size:clamp(25px,4vw,40px)}.hero p{margin:0;color:var(--muted)}
+.grid{display:grid;gap:16px}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 8px 26px rgba(0,0,0,.08)}
+.stat .label{color:var(--muted);font-size:12px}.stat .value{font-size:26px;font-weight:800;margin-top:8px}.stat .sub{font-size:12px;color:var(--muted);margin-top:5px}
+.section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:24px 0 12px}.section-head h2,.section-head h3{margin:0}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.btn{border:1px solid var(--line);padding:10px 14px;border-radius:12px;background:var(--panel2);color:var(--text);transition:.2s;font-weight:700}
+.btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.2)}.btn.primary{border:0;background:linear-gradient(135deg,var(--accent),#ff714d);color:white}
+.btn.blue{border:0;background:linear-gradient(135deg,#2563eb,#3b82f6);color:white}.btn.ghost{background:transparent}
+.btn.danger{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.28)}
+.btn.success{background:rgba(34,197,94,.12);color:#86efac;border-color:rgba(34,197,94,.28)}
+.actions{display:flex;flex-wrap:wrap;gap:8px}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.progress{height:9px;background:var(--panel3);border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .35s}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:var(--panel3);border:1px solid var(--line);font-size:11px}
+.badge.success{color:#86efac;background:rgba(34,197,94,.08)}.badge.warn{color:#fbbf24;background:rgba(245,158,11,.08)}.badge.lock{color:var(--muted)}
+.muted{color:var(--muted)}.tiny{font-size:11px}.mono{font-family:var(--mono)}
+.lesson-list{display:grid;gap:8px}.lesson-item{
+  display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:13px;
+  background:var(--panel2);transition:.2s
+}.lesson-item:hover{border-color:rgba(59,130,246,.35);transform:translateY(-1px)}.lesson-item.locked{opacity:.55}
+.lesson-item .number{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--panel3);font-size:12px;font-weight:800}
+.lesson-item.done .number{background:rgba(34,197,94,.15);color:#86efac}
+.chapter{margin-bottom:16px}.chapter-head{padding:15px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);margin-bottom:9px}
+.lesson-panel{display:none}.lesson-panel.active{display:block}
+.lesson-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:16px}
+.lesson-content{line-height:1.65}.lesson-content h2{margin-top:0}.lesson-content pre,.codebox{background:#0a0d12;color:#e5e7eb;border-radius:15px;padding:16px;overflow:auto;border:1px solid rgba(255,255,255,.07)}
+.lesson-content code{font-family:var(--mono)}.inline-code{font-family:var(--mono);background:var(--panel3);padding:2px 5px;border-radius:6px}
+.challenge textarea,.editor{width:100%;min-height:220px;resize:vertical;border:1px solid var(--line);background:#0b0e13;color:#e5e7eb;border-radius:14px;padding:14px;font-family:var(--mono);line-height:1.5;outline:0}
+.challenge textarea:focus,.editor:focus,input:focus,select:focus{border-color:rgba(59,130,246,.6);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.result{padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);margin-top:10px}
+.result.ok{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.07)}.result.bad{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.07)}
+.playground{display:grid;grid-template-columns:1fr 1fr;gap:12px}.editor-wrap{min-width:0}.preview-wrap{min-width:0}.preview-frame{width:100%;height:440px;border:1px solid var(--line);border-radius:15px;background:white}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+.searchbar{display:flex;gap:8px}.input,.select{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:11px 12px;border-radius:12px;outline:0}
+.resource-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.resource-card{padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--panel2)}
+.resource-card h3{margin:0 0 7px;font-size:15px}.resource-card p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.5}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.tab{border:1px solid var(--line);background:var(--panel2);color:var(--muted);padding:9px 12px;border-radius:999px}.tab.active{color:var(--text);border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.1)}
+.schedule-grid{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:9px}.day-col{background:var(--panel2);border:1px solid var(--line);border-radius:15px;min-height:220px;padding:10px}
+.day-col h4{margin:0 0 10px;font-size:13px}.event{padding:10px;border-radius:11px;background:var(--panel);border:1px solid var(--line);margin-bottom:8px;font-size:12px}.event.done{border-color:rgba(34,197,94,.28)}.event.missed{border-color:rgba(239,68,68,.28)}
+.chart{height:220px;display:flex;align-items:end;gap:10px;padding:10px;border-radius:15px;background:var(--panel2);border:1px solid var(--line)}
+.bar{flex:1;min-width:12px;background:linear-gradient(180deg,var(--accent2),var(--accent));border-radius:9px 9px 3px 3px;position:relative}.bar span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted)}
+.achievement-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.ach{padding:15px;text-align:center;border:1px solid var(--line);border-radius:15px;background:var(--panel2)}.ach.locked{opacity:.38;filter:grayscale(1)}.ach .emoji{font-size:33px}.ach h4{margin:9px 0 5px}.ach p{margin:0;color:var(--muted);font-size:11px}
+.chat{height:500px;display:flex;flex-direction:column}.messages{flex:1;overflow:auto;padding:8px;display:grid;gap:9px}.bubble{max-width:82%;padding:11px 13px;border-radius:14px;line-height:1.5;font-size:13px}.bubble.user{justify-self:end;background:rgba(59,130,246,.16);border:1px solid rgba(59,130,246,.23)}.bubble.ai{justify-self:start;background:var(--panel2);border:1px solid var(--line)}
+.chat-input{display:flex;gap:8px;margin-top:8px}.chat-input input{flex:1}
+.welcome{min-height:100vh;display:grid;place-items:center;padding:24px;background:
+ radial-gradient(circle at 80% 20%,rgba(59,130,246,.12),transparent 26%),
+ radial-gradient(circle at 20% 80%,rgba(255,59,48,.11),transparent 28%),var(--bg)}
+.welcome-card{width:min(1050px,100%);background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:30px;box-shadow:var(--shadow)}
+.welcome-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:25px;align-items:center}.welcome-title{font-size:clamp(30px,6vw,58px);line-height:.98;margin:0}.accent{color:var(--accent)}.level-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.level-card{padding:15px;border:1px solid var(--line);border-radius:17px;background:var(--panel2);transition:.2s;cursor:pointer;position:relative}.level-card:hover{transform:translateY(-2px);border-color:rgba(59,130,246,.4)}.level-card.selected{border-color:rgba(255,59,48,.55);box-shadow:0 0 0 3px rgba(255,59,48,.08)}
+.level-card .num{font-weight:900;font-size:11px;color:var(--muted)}.level-card h3{margin:4px 0 5px}.level-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.toast{position:fixed;right:18px;bottom:18px;z-index:100;padding:12px 15px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);max-width:360px;display:none}
+.modal-backdrop{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:18px}
+.modal{width:min(750px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.form-group{display:grid;gap:6px}.form-group label{font-size:12px;color:var(--muted)}
+.empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:15px}
+.footer-note{margin-top:22px;color:var(--muted);font-size:11px;text-align:center}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.resource-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lesson-layout{grid-template-columns:1fr}.schedule-grid{grid-template-columns:repeat(4,minmax(100px,1fr))}}
+@media(max-width:820px){:root{--sidebar:0px}.sidebar{display:none}.main{margin-left:0;width:100%}.mobile-menu{display:inline-flex}.content{padding:16px}.topbar{padding:11px 14px}.grid-2,.grid-3,.grid-4,.welcome-grid{grid-template-columns:1fr}.level-grid{grid-template-columns:1fr}.playground{grid-template-columns:1fr}.schedule-grid{grid-template-columns:repeat(2,minmax(130px,1fr))}.resource-grid{grid-template-columns:1fr}.achievement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div id="welcome" class="welcome">
+  <div class="welcome-card">
+    <div class="welcome-grid">
+      <section>
+        <div class="badge" style="margin-bottom:12px">🚀 Coding Academy • HTML</div>
+        <h1 class="welcome-title">HTML<br><span class="accent">CODE LAB</span></h1>
+        <p style="margin-top:15px;color:var(--muted);line-height:1.6">Học HTML theo lộ trình cá nhân hóa: học → thử code → nhận phản hồi → làm project → theo dõi tiến độ.</p>
+        <div class="card" style="margin-top:18px;background:var(--panel2)">
+          <div class="between"><strong>🤖 AI Learning Path</strong><span class="pill">Offline-ready</span></div>
+          <p class="tiny muted" style="margin:7px 0 0">Không có API AI thật? Không sao. AI Teacher và AI Recommendation dùng kiến thức tích hợp sẵn và ghi rõ trạng thái.</p>
+        </div>
+      </section>
+      <section>
+        <div class="section-head" style="margin-top:0"><div><h2>Bạn đã từng học HTML chưa?</h2><p>Chọn mức gần với bạn nhất. Bạn có thể đổi lại trong Cài đặt.</p></div></div>
+        <div id="levelChoices" class="level-grid"></div>
+        <button id="startBtn" class="btn primary" style="width:100%;margin-top:12px;padding:13px">BẮT ĐẦU HỌC 🚀</button>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app" style="display:none">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo-mark">&lt;/&gt;</div><div><strong>HTML CODE LAB</strong><small>CODING ACADEMY</small></div></div>
+    <nav id="nav" class="nav"></nav>
+    <div class="side-footer">
+      <div class="user-mini"><div class="top"><strong id="sideLevel">Beginner</strong><span class="pill" id="sideXp">0 XP</span></div><div class="progress" style="margin-top:10px"><span id="sideProgress" style="width:0%"></span></div></div>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="row"><button id="mobileMenu" class="icon-btn mobile-menu">☰</button><div><strong id="pageTitle">Dashboard</strong><div class="tiny muted">Học HTML theo nhịp độ của bạn</div></div></div>
+      <div class="top-actions"><button id="themeBtn" class="icon-btn" title="Đổi giao diện">🌙</button><button id="resetQuick" class="icon-btn" title="Reset dữ liệu">↺</button></div>
+    </header>
+
+    <div class="content">
+      <section id="view-dashboard" class="view"></section>
+      <section id="view-learning" class="view"></section>
+      <section id="view-playground" class="view"></section>
+      <section id="view-resources" class="view"></section>
+      <section id="view-schedule" class="view"></section>
+      <section id="view-progress" class="view"></section>
+      <section id="view-achievements" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modalBackdrop" class="modal-backdrop"><div id="modal" class="modal"></div></div>
+
+<script>
+(() => {
+'use strict';
+
+const STORE = 'html_code_lab_state_v1';
+
+const LEVELS = {
+  1:{name:'HTML Beginner',short:'Beginner',icon:'🟢',desc:'Hoàn toàn mới với HTML.',difficulty:'Rất dễ'},
+  2:{name:'HTML Learner',short:'Learner',icon:'🔵',desc:'Đã từng học nhưng chưa vững.',difficulty:'Cơ bản'},
+  3:{name:'HTML Builder',short:'Builder',icon:'🟠',desc:'Tự viết được website cơ bản.',difficulty:'Trung cấp'},
+  4:{name:'HTML Developer',short:'Developer',icon:'🔴',desc:'Đã thành thạo và muốn nâng cao.',difficulty:'Nâng cao'}
+};
+
+const chapters = [
+  {id:1,title:'Làm quen HTML',difficulty:'Beginner',lessons:[
+    ['html-what','HTML là gì?','Khái niệm HTML, thẻ, phần tử và cách trình duyệt hiểu tài liệu.','<h1>Hello World</h1>','Tạo một tiêu đề lớn có nội dung "My Website".','h1'],
+    ['html-structure','Cấu trúc cơ bản của HTML','Doctype, html, head, body và bộ khung chuẩn của một trang.','<!DOCTYPE html>\\n<html>\\n<head><title>My Site</title></head>\\n<body><h1>Hello</h1></body>\\n</html>','Tạo cấu trúc HTML tối thiểu gồm html, head, title và body.','structure'],
+    ['html-tag','Thẻ <html>','Phần tử gốc bao bọc toàn bộ tài liệu HTML.','<html lang="vi">\\n</html>','Tạo phần tử html và thêm lang="vi".','html-tag'],
+    ['html-head','Thẻ <head>','Khu vực chứa metadata, title, stylesheet và thông tin cho trình duyệt.','<head>\\n  <title>My Website</title>\\n</head>','Tạo head có title là "My Website".','head'],
+    ['html-body','Thẻ <body>','Nội dung hiển thị trên trang nằm trong body.','<body>\\n  <h1>Hello World</h1>\\n</body>','Tạo body chứa một đoạn văn "Welcome!".','body'],
+    ['html-heading','Tiêu đề h1 → h6','Các cấp tiêu đề giúp cấu trúc nội dung rõ ràng.','<h1>Website</h1>\\n<h2>About</h2>','Tạo h1 "My Website" và h2 "About Me".','heading'],
+    ['html-p','Đoạn văn <p>','Dùng p để tạo một đoạn văn bản.','<p>Hello, HTML!</p>','Tạo một p với nội dung "I love HTML!".','p'],
+    ['html-br','Xuống dòng <br>','br tạo dòng mới mà không cần mở thẻ đóng.','Hello<br>World','Tạo hai dòng: Hello và World bằng br.','br']
+  ]},
+  {id:2,title:'Text & Format',difficulty:'Beginner',lessons:[
+    ['text-strong','<strong>','Nhấn mạnh nội dung quan trọng, mang ý nghĩa semantic.','<strong>Important</strong>','Tạo strong với chữ "Important".','strong'],
+    ['text-b','<b>','Làm nổi bật trực quan mà không nhất thiết mang nghĩa quan trọng.','<b>Bold</b>','Tạo b với chữ "Bold Text".','b'],
+    ['text-i','<i> và <em>','i thường dùng cho sắc thái; em mang ý nghĩa nhấn mạnh.','<i>Note</i>\\n<em>Warning</em>','Tạo i "Note" và em "Warning".','i-em'],
+    ['text-u','<u>, <mark>, <small>','Định dạng văn bản bổ sung.','<u>Underlined</u> <mark>Highlight</mark> <small>Small</small>','Dùng mark để highlight từ "HTML".','u-mark-small'],
+    ['text-del','<del>','Biểu thị nội dung đã bị xóa hoặc không còn đúng.','<del>Old price</del>','Tạo del với nội dung "Old".','del'],
+    ['text-sub','<sub> và <sup>','Hiển thị chỉ số dưới và chỉ số trên.','H<sub>2</sub>O\\nX<sup>2</sup>','Tạo H2O bằng sub và X² bằng sup.','sub-sup']
+  ]},
+  {id:3,title:'Link & Image',difficulty:'Beginner',lessons:[
+    ['link-a','Liên kết <a>','Tạo liên kết đến trang khác bằng href.','<a href="https://example.com">Visit</a>','Tạo liên kết có chữ "Google" và href trỏ tới https://google.com.','a'],
+    ['link-href','Thuộc tính href','href xác định địa chỉ đích của liên kết.','<a href="/about.html">About</a>','Tạo liên kết "About" với href="/about.html".','href'],
+    ['img-img','Hình ảnh <img>','img là phần tử rỗng dùng src và alt để hiển thị ảnh.','<img src="photo.jpg" alt="A photo">','Tạo img có src="photo.jpg" và alt="My photo".','img'],
+    ['img-alt','Thuộc tính alt','alt mô tả ảnh khi ảnh không tải được và hỗ trợ accessibility.','<img src="cat.jpg" alt="A sleeping cat">','Tạo img có alt="My avatar".','alt'],
+    ['path-relative','Đường dẫn tương đối','Đường dẫn tương đối tham chiếu tài nguyên theo vị trí file hiện tại.','<img src="images/logo.png" alt="Logo">','Tạo ảnh với src="images/logo.png".','relative']
+  ]},
+  {id:4,title:'List',difficulty:'Beginner',lessons:[
+    ['list-ul','Danh sách <ul>','Danh sách không có thứ tự thường dùng với li.','<ul><li>Apple</li><li>Banana</li></ul>','Tạo ul có 3 món: Rice, Noodles, Pizza.','ul'],
+    ['list-ol','Danh sách <ol>','Danh sách có thứ tự, phù hợp các bước.','<ol><li>Open</li><li>Run</li></ol>','Tạo ol gồm Step 1, Step 2, Step 3.','ol'],
+    ['list-li','Phần tử <li>','li là một mục bên trong ul hoặc ol.','<ul><li>One</li></ul>','Tạo ul chứa li "HTML".','li']
+  ]},
+  {id:5,title:'Table',difficulty:'Beginner',lessons:[
+    ['table-main','Bảng <table>','Table biểu diễn dữ liệu dạng hàng và cột.','<table><tr><th>Name</th><th>Age</th></tr><tr><td>Minh</td><td>12</td></tr></table>','Tạo bảng có tiêu đề Name và Age, một dòng Alex 13.','table'],
+    ['table-tr','<tr>, <td>, <th>','tr là hàng, td là ô dữ liệu, th là ô tiêu đề.','<tr><td>HTML</td><td>Easy</td></tr>','Tạo một hàng gồm hai td: "HTML" và "Easy".','trtdth'],
+    ['table-span','colspan & rowspan','Gộp cột hoặc gộp hàng khi cần biểu diễn dữ liệu đặc biệt.','<td colspan="2">Total</td>','Tạo td có colspan="2" và nội dung "Total".','span']
+  ]},
+  {id:6,title:'Form',difficulty:'Intermediate',lessons:[
+    ['form-main','<form>','Form chứa các control để nhập và gửi dữ liệu.','<form><label>Name</label><input type="text"></form>','Tạo form có input type="text".','form'],
+    ['form-input','<input>','Input có nhiều type như text, email, password, number, date.','<input type="email" placeholder="Email">','Tạo input type="email" với placeholder "Your email".','input'],
+    ['form-label','<label>','Label mô tả control và cải thiện accessibility.','<label for="name">Name</label>\\n<input id="name">','Tạo label "Username" liên kết tới input id="username".','label'],
+    ['form-select','<select> & <option>','Tạo lựa chọn dạng danh sách.','<select><option>Vietnam</option><option>Japan</option></select>','Tạo select có option "Vietnam" và "Japan".','select'],
+    ['form-button','<button>','Nút tương tác có thể submit hoặc thực hiện hành động.','<button type="submit">Submit</button>','Tạo button type="submit" có chữ Register.','button']
+  ]},
+  {id:7,title:'Semantic HTML',difficulty:'Intermediate',lessons:[
+    ['sem-header','<header>','Khu vực đầu trang hoặc đầu một section/article.','<header><h1>My Site</h1></header>','Tạo header chứa h1 "My Site".','header'],
+    ['sem-nav','<nav>','Chứa nhóm liên kết điều hướng chính.','<nav><a href="/">Home</a></nav>','Tạo nav có link "Home".','nav'],
+    ['sem-main','<main>','Nội dung chính duy nhất của tài liệu.','<main><h1>Content</h1></main>','Tạo main chứa h1 "Content".','main'],
+    ['sem-section','<section> & <article>','Section nhóm nội dung theo chủ đề; article là nội dung độc lập.','<section><h2>News</h2></section>','Tạo section có h2 "News".','section'],
+    ['sem-footer','<footer>','Chân trang của tài liệu hoặc section.','<footer>© 2026</footer>','Tạo footer có nội dung "© 2026".','footer']
+  ]},
+  {id:8,title:'Multimedia',difficulty:'Intermediate',lessons:[
+    ['media-audio','<audio>','Nhúng âm thanh bằng controls và source.','<audio controls><source src="song.mp3" type="audio/mpeg"></audio>','Tạo audio có controls.','audio'],
+    ['media-video','<video>','Nhúng video với controls, width và source.','<video controls width="480"><source src="movie.mp4" type="video/mp4"></video>','Tạo video có controls và width="480".','video'],
+    ['media-iframe','<iframe>','Nhúng một tài liệu hoặc trang khác vào vùng riêng.','<iframe src="https://example.com" title="Example"></iframe>','Tạo iframe có title="Demo".','iframe']
+  ]},
+  {id:9,title:'HTML5',difficulty:'Intermediate',lessons:[
+    ['html5-meta','Meta & viewport','Giúp trình duyệt hiểu encoding và hiển thị responsive.','<meta charset="UTF-8">\\n<meta name="viewport" content="width=device-width, initial-scale=1.0">','Tạo meta charset UTF-8.','meta'],
+    ['html5-input','Input types hiện đại','HTML5 bổ sung email, date, color, range, number và nhiều loại khác.','<input type="date">','Tạo input type="date".','date'],
+    ['html5-data','data-* attributes','Thuộc tính data-* lưu dữ liệu tùy biến mà không phá vỡ HTML chuẩn.','<button data-id="42">Open</button>','Tạo button data-id="42".','data']
+  ]},
+  {id:10,title:'Accessibility',difficulty:'Advanced',lessons:[
+    ['a11y-lang','Ngôn ngữ tài liệu','Lang giúp công cụ hỗ trợ biết ngôn ngữ của trang.','<html lang="vi">','Tạo html lang="vi".','a11y-lang'],
+    ['a11y-alt','Alt text tốt','Alt nên ngắn, mô tả đúng mục đích hình ảnh.','<img src="logo.png" alt="HTML Code Lab logo">','Tạo img có alt mô tả "Profile photo".','a11y-alt'],
+    ['a11y-label','Form labels','Label rõ ràng giúp người dùng công nghệ hỗ trợ hiểu control.','<label for="email">Email</label><input id="email">','Tạo label Email và input id="email".','a11y-label']
+  ]},
+  {id:11,title:'SEO cơ bản',difficulty:'Advanced',lessons:[
+    ['seo-title','Title & description','Title và meta description giúp mô tả trang với công cụ tìm kiếm.','<title>HTML Code Lab</title>','Tạo title "My Website".','seo-title'],
+    ['seo-headings','Heading hierarchy','Sử dụng heading theo cấu trúc logic thay vì chỉ để đổi cỡ chữ.','<h1>Main</h1><h2>Section</h2>','Tạo h1 Main và h2 Section.','seo-headings'],
+    ['seo-link','Link text có ý nghĩa','Anchor text nên mô tả rõ đích đến.','<a href="/docs">HTML Docs</a>','Tạo link text "HTML Docs".','seo-link']
+  ]},
+  {id:12,title:'Website thực tế',difficulty:'Expert',lessons:[
+    ['real-layout','Trang web hoàn chỉnh','Kết hợp header, nav, main, section, footer thành cấu trúc hợp lý.','<header><h1>My Site</h1></header>\\n<main><section><h2>About</h2><p>Hello</p></section></main>','Tạo header + main + footer trong cùng đoạn code.','real-layout'],
+    ['real-profile','Personal Introduction','Xây trang giới thiệu bản thân bằng heading, paragraph, image và list.','<h1>About Me</h1>\\n<p>I am a student.</p>','Tạo h1 "About Me" và p "I am a student.".','real-profile'],
+    ['real-school','My School','Tạo trang giới thiệu trường với section, list và table.','<section><h2>My School</h2><ul><li>Class</li></ul></section>','Tạo section có h2 "My School" và một li "Class 7".','real-school'],
+    ['real-portfolio','Portfolio','Kết hợp semantic layout và form liên hệ thành portfolio.','<main><h1>My Portfolio</h1><section><h2>Projects</h2></section></main>','Tạo main có h1 "My Portfolio" và section h2 "Projects".','real-portfolio']
+  ]}
+];
+
+const quizzes = {
+1:[
+  ['Thẻ nào dùng cho tiêu đề lớn nhất?',['<p>','<h1>','<title>','<header>'],1],
+  ['Phần nội dung hiển thị của trang nằm ở đâu?',['<head>','<meta>','<body>','<title>'],2],
+  ['Thẻ nào tạo đoạn văn?',['<p>','<para>','<text>','<paragraph>'],0],
+  ['Thẻ nào xuống dòng?',['<break>','<br>','<lb>','<newline>'],1]
+],
+2:[
+  ['Thẻ nào mang ý nghĩa nhấn mạnh?',['<b>','<strong>','<font>','<bold>'],1],
+  ['Thẻ nào dùng để highlight?',['<mark>','<hl>','<highlight>','<strong>'],0],
+  ['Thẻ nào biểu thị nội dung đã xóa?',['<remove>','<cut>','<del>','<old>'],2]
+],
+3:[
+  ['Thuộc tính chỉ địa chỉ liên kết?',['src','href','link','url'],1],
+  ['Thẻ hình ảnh sử dụng thuộc tính nào để chỉ đường dẫn?',['src','href','path','img'],0],
+  ['alt có vai trò gì?',['Đổi màu ảnh','Mô tả ảnh và hỗ trợ accessibility','Tạo link','Làm ảnh to hơn'],1]
+],
+4:[
+  ['Danh sách không thứ tự dùng thẻ nào?',['<ol>','<ul>','<list>','<li>'],1],
+  ['Một mục danh sách dùng thẻ nào?',['<item>','<li>','<point>','<row>'],1]
+],
+5:[
+  ['Thẻ nào tạo hàng trong bảng?',['<row>','<tr>','<td>','<th>'],1],
+  ['Thẻ nào là ô tiêu đề?',['<head>','<header>','<th>','<title>'],2],
+  ['colspan dùng để làm gì?',['Gộp hàng','Gộp cột','Đổi màu','Tạo form'],1]
+],
+6:[
+  ['Form nhập email thường dùng type nào?',['text','mailbox','email','input-email'],2],
+  ['Label liên kết với input bằng cặp thuộc tính nào?',['for và id','name và href','src và alt','class và style'],0],
+  ['Thẻ nào tạo nút?',['<input>','<button>','<click>','<submit>'],1]
+],
+7:[
+  ['Khu vực điều hướng chính dùng thẻ nào?',['<menu>','<navigate>','<nav>','<links>'],2],
+  ['Nội dung chính duy nhất dùng thẻ nào?',['<main>','<content>','<primary>','<body>'],0]
+],
+8:[
+  ['Thẻ nhúng âm thanh?',['<sound>','<audio>','<music>','<media>'],1],
+  ['Thẻ nhúng video?',['<movie>','<video>','<film>','<clip>'],1]
+],
+9:[
+  ['Meta encoding phổ biến là?',['UTF-8','HTML-8','UNICODE-HTML','UTF-16'],0],
+  ['data-* dùng để làm gì?',['Lưu dữ liệu tùy biến','Đổi font','Tải ảnh','SEO tự động'],0]
+],
+10:[
+  ['Thuộc tính nào giúp trình đọc màn hình hiểu ảnh?',['title','alt','src','role-only'],1],
+  ['lang trên html giúp gì?',['Chọn màu','Xác định ngôn ngữ tài liệu','Tăng tốc CSS','Tạo link'],1]
+],
+11:[
+  ['Thẻ nào tạo tiêu đề tài liệu của tab trình duyệt?',['<h1>','<header>','<title>','<meta>'],2],
+  ['Heading hierarchy nên được dùng thế nào?',['Ngẫu nhiên','Theo cấu trúc logic','Chỉ dùng h6','Chỉ để làm chữ to'],1]
+],
+12:[
+  ['Một trang semantic tốt thường kết hợp gì?',['div mọi nơi','header/nav/main/footer','table mọi nơi','iframe mọi nơi'],1],
+  ['Portfolio nên dùng gì để tổ chức section dự án?',['<section>','<font>','<blink>','<center>'],0]
+]
+};
+
+const resources = [
+ {title:'MDN — HTML',desc:'Tài liệu tham khảo HTML rất chi tiết, ví dụ và giải thích từng phần tử.',difficulty:'Beginner',cat:'HTML Basics',url:'https://developer.mozilla.org/en-US/docs/Web/HTML'},
+ {title:'MDN — HTML Elements',desc:'Tra cứu danh sách phần tử HTML và cách sử dụng.',difficulty:'Intermediate',cat:'HTML Tags',url:'https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements'},
+ {title:'WHATWG — HTML Living Standard',desc:'Chuẩn HTML Living Standard của WHATWG.',difficulty:'Advanced',cat:'HTML5',url:'https://html.spec.whatwg.org/'},
+ {title:'W3C — Markup Validation Service',desc:'Công cụ kiểm tra tính hợp lệ của markup HTML.',difficulty:'Intermediate',cat:'Tips & Tricks',url:'https://validator.w3.org/'},
+ {title:'web.dev — Learn HTML',desc:'Khóa học HTML theo dạng bài học và thực hành.',difficulty:'Beginner',cat:'Projects',url:'https://web.dev/learn/html/'},
+ {title:'MDN — Forms',desc:'Hướng dẫn form, input, label và validation.',difficulty:'Intermediate',cat:'Forms',url:'https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms'},
+ {title:'MDN — Tables',desc:'Cách tạo và cấu trúc bảng dữ liệu.',difficulty:'Beginner',cat:'Tables',url:'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/HTML_table_basics'},
+ {title:'MDN — Accessibility',desc:'Nền tảng accessibility cho web developers.',difficulty:'Advanced',cat:'Accessibility',url:'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Accessibility'},
+ {title:'MDN — SEO',desc:'Những nguyên tắc HTML giúp tài liệu dễ khám phá và hiểu hơn.',difficulty:'Advanced',cat:'SEO',url:'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content'},
+ {title:'HTML Playground Tips',desc:'Các mẫu thực hành ngắn được tích hợp sẵn trong ứng dụng.',difficulty:'Beginner',cat:'Tips & Tricks',url:'#'}
+];
+
+const projects = [
+ {id:'p1',name:'Personal Introduction',desc:'Tạo trang giới thiệu bản thân với h1, p, img và list.',minLevel:1,xp:200,starter:'<h1>About Me</h1>\\n<p>I am a student.</p>\\n<ul>\\n  <li>HTML</li>\\n  <li>Games</li>\\n</ul>'},
+ {id:'p2',name:'My School',desc:'Website giới thiệu trường: tiêu đề, section, danh sách và bảng.',minLevel:1,xp:200,starter:'<header><h1>My School</h1></header>\\n<main>\\n  <section><h2>About</h2><p>My school is great.</p></section>\\n</main>'},
+ {id:'p3',name:'My Favorite Game',desc:'Trang giới thiệu game yêu thích với hình ảnh, link và list.',minLevel:2,xp:250,starter:'<h1>My Favorite Game</h1>\\n<img src="game.jpg" alt="Game cover">\\n<p>I love this game.</p>\\n<a href="#">Learn more</a>'},
+ {id:'p4',name:'Portfolio',desc:'Portfolio cá nhân có semantic layout và form liên hệ.',minLevel:3,xp:350,starter:'<header><h1>My Portfolio</h1><nav><a href="#projects">Projects</a></nav></header>\\n<main><section id="projects"><h2>Projects</h2></section></main>\\n<footer>© 2026</footer>'},
+ {id:'p5',name:'Complete Website',desc:'Website hoàn chỉnh kết hợp semantic HTML, bảng, form và multimedia.',minLevel:4,xp:500,starter:'<!DOCTYPE html>\\n<html lang="vi">\\n<head><meta charset="UTF-8"><title>Complete Website</title></head>\\n<body><header><h1>Complete Website</h1></header><main><section><h2>Welcome</h2></section></main><footer>© 2026</footer></body>\\n</html>'}
+];
+
+const defaultState = () => ({
+  initialized:false,userLevel:1,completedLessons:[],currentChapter:1,currentLessonId:null,XP:0,
+  streak:0,longestStreak:0,lastStudyDate:null,quizScores:{},savedProjects:[],schedule:[],
+  achievements:[],settings:{theme:'dark',fontSize:16,language:'vi',editorTabSize:2,onlineResourceMode:false,onlineEndpoint:''},
+  studyMinutes:0,practiceRuns:0,errors:{},recentActivities:[],weekly:[0,0,0,0,0,0,0]
+});
+
+let state = defaultState();
+let selectedLevel = 1;
+let currentView = 'dashboard';
+let currentQuizChapter = null;
+let currentLesson = null;
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE);
+    if(raw) state = Object.assign(defaultState(), JSON.parse(raw));
+  }catch(e){ state = defaultState(); }
+}
+function saveState(){ localStorage.setItem(STORE, JSON.stringify(state)); }
+function todayKey(d=new Date()){ return d.toISOString().slice(0,10); }
+function addDays(date, n){ const d=new Date(date); d.setDate(d.getDate()+n); return d; }
+function humanMinutes(m){ const h=Math.floor(m/60), min=m%60; return h ? `${h} giờ ${min} phút` : `${min} phút`; }
+function totalLessons(){ return chapters.reduce((n,c)=>n+c.lessons.length,0); }
+function currentLevel(){ return LEVELS[state.userLevel] || LEVELS[1]; }
+function progressPercent(){
+  return Math.round((state.completedLessons.length / totalLessons())*100);
+}
+function unlockedChapter(chId){
+  if(chId===1) return true;
+  const prev=chapters.find(c=>c.id===chId-1);
+  const completion=prev ? prev.lessons.filter(l=>state.completedLessons.includes(l[0])).length : 0;
+  return completion>=Math.max(1,Math.floor(prev.lessons.length*.65)) || state.userLevel>=4;
+}
+function xpLevel(){
+  const xp=state.XP;
+  if(xp<250) return 'HTML Beginner';
+  if(xp<600) return 'HTML Learner';
+  if(xp<1000) return 'HTML Builder';
+  if(xp<1600) return 'HTML Developer';
+  if(xp<2400) return 'HTML Expert';
+  return 'HTML Master';
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  clearTimeout(toast._timer); toast._timer=setTimeout(()=>t.style.display='none',2600);
+}
+function addXP(amount, reason){
+  state.XP += amount;
+  state.recentActivities.unshift({type:'xp',reason,amount,date:new Date().toLocaleString('vi-VN')});
+  state.recentActivities = state.recentActivities.slice(0,12);
+  updateAchievements(); saveState(); renderShell(); toast(`⭐ +${amount} XP — ${reason}`);
+}
+function updateStreak(){
+  const today=todayKey(), last=state.lastStudyDate;
+  if(last===today) return;
+  if(last){
+    const diff=Math.round((new Date(today)-new Date(last))/86400000);
+    if(diff===1) state.streak+=1;
+    else if(diff>1){ state.streak=1; toast('🔥 Streak đã được khởi động lại hôm nay.'); }
+  }else state.streak=1;
+  state.longestStreak=Math.max(state.longestStreak,state.streak); state.lastStudyDate=today;
+  const day=new Date().getDay(); const idx=day===0?6:day-1; state.weekly[idx]=Math.min(10,state.weekly[idx]+1);
+}
+function completeLesson(id){
+  if(state.completedLessons.includes(id)){ openLesson(id); return; }
+  state.completedLessons.push(id); updateStreak(); addXP(50,'Hoàn thành bài học'); saveState(); renderLearning(); renderDashboard(); renderProgress();
+  toast('✅ Hoàn thành bài học!');
+}
+function updateAchievements(){
+  const unlock=[];
+  const has=id=>state.achievements.includes(id);
+  const grant=(id)=>{ if(!has(id)){state.achievements.push(id);unlock.push(id);} };
+  if(state.practiceRuns>0) grant('first-code');
+  if(state.completedLessons.length>0) grant('first-lesson');
+  if(state.streak>=7) grant('streak7');
+  if(state.XP>=1000) grant('xp1000');
+  if(state.savedProjects.length>0) grant('first-project');
+  if(state.completedLessons.length>=15) grant('builder');
+  if(state.completedLessons.length>=25) grant('expert');
+  if(progressPercent()>=90) grant('master');
+  if(unlock.length) setTimeout(()=>toast(`🏆 Huy hiệu mới: ${achievementName(unlock[unlock.length-1])}`),150);
+}
+function achievementName(id){
+  return ({'first-code':'First Code','first-lesson':'First Lesson','streak7':'7 Day Streak','xp1000':'1000 XP','first-project':'First Project','builder':'HTML Builder','expert':'HTML Expert','master':'HTML Master'})[id]||id;
+}
+
+function renderWelcome(){
+  const wrap=document.getElementById('levelChoices');
+  wrap.innerHTML = Object.entries(LEVELS).map(([id,l])=>`
+    <div class="level-card ${selectedLevel==id?'selected':''}" data-level="${id}">
+      <div class="num">${l.icon} LEVEL ${id} • ${l.difficulty}</div>
+      <h3>${l.name}</h3><p>${l.desc}</p>
+    </div>`).join('');
+  wrap.querySelectorAll('.level-card').forEach(el=>el.onclick=()=>{selectedLevel=+el.dataset.level;renderWelcome()});
+}
+function startApp(){
+  state.initialized=true; state.userLevel=selectedLevel; saveState();
+  document.getElementById('welcome').style.display='none'; document.getElementById('app').style.display='flex';
+  navigate('dashboard');
+}
+function renderShell(){
+  const level=currentLevel(); document.getElementById('sideLevel').textContent=level.name; document.getElementById('sideXp').textContent=state.XP+' XP';
+  document.getElementById('sideProgress').style.width=progressPercent()+'%';
+  document.documentElement.classList.toggle('light', state.settings.theme==='light');
+  document.getElementById('themeBtn').textContent=state.settings.theme==='light'?'☀️':'🌙';
+}
+function navigate(view){
+  currentView=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  document.getElementById('pageTitle').textContent=({
+    dashboard:'Dashboard',learning:'Học tập',playground:'Thử nghiệm',resources:'Kho học liệu',
+    schedule:'Thời khóa biểu',progress:'Tiến độ',achievements:'Thành tích',settings:'Cài đặt'
+  })[view];
+  if(view==='dashboard')renderDashboard();
+  if(view==='learning')renderLearning();
+  if(view==='playground')renderPlayground();
+  if(view==='resources')renderResources();
+  if(view==='schedule')renderSchedule();
+  if(view==='progress')renderProgress();
+  if(view==='achievements')renderAchievements();
+  if(view==='settings')renderSettings();
+}
+function initNav(){
+  const items=[
+    ['dashboard','🏠','Dashboard'],['learning','📚','Học tập'],['playground','💻','Thử nghiệm'],['resources','📦','Kho học liệu'],
+    ['schedule','📅','Thời khóa biểu'],['progress','📊','Tiến độ'],['achievements','🏆','Thành tích'],['settings','⚙️','Cài đặt']
+  ];
+  document.getElementById('nav').innerHTML=items.map(i=>`<button data-view="${i[0]}"><span class="icon">${i[1]}</span><span>${i[2]}</span></button>`).join('');
+  document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{navigate(b.dataset.view); if(window.innerWidth<820)document.querySelector('.sidebar').style.display='none';});
+}
+function streakMessage(){
+  if(state.streak>=100)return '🔥 100 ngày liên tiếp!';
+  if(state.streak>=30)return '🔥 30 ngày liên tiếp!';
+  if(state.streak>=14)return '🔥 14 ngày liên tiếp!';
+  if(state.streak>=7)return '🔥 7 ngày liên tiếp!';
+  return state.streak?`🔥 ${state.streak} ngày liên tiếp`:'🔥 Bắt đầu streak hôm nay';
+}
+function aiRecommendation(){
+  const recent=state.recentActivities.slice(0,5).map(x=>x.reason).join(', ');
+  const forms = chapters.find(c=>c.id===6).lessons.filter(l=>state.completedLessons.includes(l[0])).length;
+  if(state.errors['form']>=2 || (currentView==='learning'&&currentLesson&&currentLesson.challenge==='form')) return {title:'Ôn lại <input> trước khi học <form>',desc:'AI nhận thấy bạn đang gặp khó khăn với Form. Hãy củng cố input + label trước.',target:'form-input'};
+  if(forms<2 && progressPercent()>35) return {title:'Luyện Forms cơ bản',desc:'Bạn đã có nền HTML đủ tốt để bắt đầu form bằng các bài input và label.',target:'form-input'};
+  const next=chapters.flatMap(c=>c.lessons).find(l=>!state.completedLessons.includes(l[0]) && unlockedChapter(chapters.find(x=>x.lessons.some(y=>y[0]===l[0]))?.id||1));
+  return next?{title:`Tiếp tục: ${next[1]}`,desc:'Đây là bài gần nhất phù hợp với tiến độ hiện tại của bạn.',target:next[0]}:{title:'Bạn đã gần hoàn thành lộ trình!',desc:'Hãy thử một mini project để củng cố kiến thức.',target:'project'};
+}
+function renderDashboard(){
+  const rec=aiRecommendation();
+  const next=chapters.flatMap(c=>c.lessons).find(l=>!state.completedLessons.includes(l[0]) && unlockedChapter(chapters.find(x=>x.lessons.some(y=>y[0]===l[0]))?.id||1));
+  document.getElementById('view-dashboard').innerHTML=`
+    <div class="hero">
+      <div class="between"><div><div class="badge">🤖 ${currentLevel().name}</div><h1 style="margin-top:11px">👋 Chào mừng trở lại!</h1><p>Hôm nay chúng ta sẽ tiếp tục học HTML theo lộ trình cá nhân hóa.</p></div><button class="btn primary" id="continueBtn">${next?'TIẾP TỤC HỌC':'XEM PROJECTS'} →</button></div>
+    </div>
+    <div class="grid grid-4" style="margin-top:16px">
+      <div class="card stat"><div class="label">🔥 Streak</div><div class="value">${state.streak}</div><div class="sub">${streakMessage()}</div></div>
+      <div class="card stat"><div class="label">📚 Bài hoàn thành</div><div class="value">${state.completedLessons.length}</div><div class="sub">${progressPercent()}% lộ trình</div></div>
+      <div class="card stat"><div class="label">⭐ XP</div><div class="value">${state.XP}</div><div class="sub">${xpLevel()}</div></div>
+      <div class="card stat"><div class="label">⏱ Thời gian học</div><div class="value" style="font-size:21px">${humanMinutes(state.studyMinutes)}</div><div class="sub">Theo dõi phiên học trong bài học</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="card"><div class="section-head" style="margin-top:0"><div><h3>📈 Tiến độ</h3><p>Toàn bộ lộ trình HTML</p></div><strong>${progressPercent()}%</strong></div>
+        <div class="progress"><span style="width:${progressPercent()}%"></span></div>
+        <div class="between tiny muted" style="margin-top:8px"><span>0%</span><span>${state.completedLessons.length}/${totalLessons()} bài</span><span>100%</span></div>
+      </div>
+      <div class="card"><div class="section-head" style="margin-top:0"><div><h3>🤖 AI Recommendation</h3><p>Dựa trên trình độ, tiến độ và lịch sử hoạt động</p></div></div>
+        <div class="result" style="margin-top:0"><strong>${escapeHtml(rec.title)}</strong><p class="muted tiny">${escapeHtml(rec.desc)}</p>
+        <button class="btn blue" id="recBtn" style="margin-top:7px">HỌC NGAY</button></div>
+      </div>
+    </div>
+    <div class="grid grid-3" style="margin-top:16px">
+      <div class="card"><div class="section-head" style="margin-top:0"><div><h3>🔥 Thói quen</h3><p>Tuần này</p></div></div><div class="chart" style="height:160px">${state.weekly.map((v,i)=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:end;gap:5px;text-align:center"><div class="bar" style="height:${Math.max(12,v*13)}px" title="${v} bài"><span>${v||''}</span></div><div class="tiny muted">${['T2','T3','T4','T5','T6','T7','CN'][i]}</div></div>`).join('')}</div></div>
+      <div class="card"><div class="section-head" style="margin-top:0"><div><h3>🏆 Thành tích</h3><p>Huy hiệu gần nhất</p></div></div>${state.achievements.slice(-3).reverse().map(a=>`<div class="between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${achievementIcon(a)} ${achievementName(a)}</span><span class="badge success">Đã mở</span></div>`).join('')||'<div class="empty">Chưa có huy hiệu. Hãy hoàn thành bài đầu tiên!</div>'}</div>
+      <div class="card"><div class="section-head" style="margin-top:0"><div><h3>⚡ Bắt đầu nhanh</h3><p>Thực hành ngay</p></div></div><div class="actions"><button class="btn" data-go="playground">💻 Playground</button><button class="btn" data-go="learning">📚 Learning</button><button class="btn" data-go="resources">📦 Resources</button></div></div>
+    </div>`;
+  document.getElementById('continueBtn').onclick=()=> next ? openLesson(next[0]) : navigate('learning');
+  document.getElementById('recBtn').onclick=()=> rec.target==='project' ? openProjectModal() : openLesson(rec.target);
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>navigate(b.dataset.go));
+}
+function achievementIcon(id){ return ({'first-code':'🏅','first-lesson':'🏅','streak7':'🔥','xp1000':'⭐','first-project':'🚀','builder':'🧱','expert':'🧠','master':'👑'})[id]||'🏅'; }
+
+function renderLearning(){
+  const container=document.getElementById('view-learning');
+  container.innerHTML=`<div class="between"><div><h2 style="margin:0">📚 Lộ trình học HTML</h2><p class="muted">Level hiện tại: ${currentLevel().name} • Chương khóa theo tiến độ</p></div><div class="actions"><button class="btn" id="quizBtn">🧠 Quiz</button><button class="btn blue" id="projectBtn">🚀 Mini Project</button></div></div>
+    <div id="lessonArea" style="margin-top:15px"></div>`;
+  document.getElementById('quizBtn').onclick=()=>openQuizPicker();
+  document.getElementById('projectBtn').onclick=()=>openProjectModal();
+  if(currentLesson) renderLessonPanel(currentLesson); else renderChapterList();
+}
+function renderChapterList(){
+  const area=document.getElementById('lessonArea');
+  area.innerHTML=chapters.map(ch=>{
+    const done=ch.lessons.filter(l=>state.completedLessons.includes(l[0])).length;
+    const unlocked=unlockedChapter(ch.id);
+    return `<div class="chapter"><div class="chapter-head"><div class="between"><div><div class="row"><strong>CHƯƠNG ${ch.id} — ${ch.title}</strong><span class="badge ${unlocked?'':'lock'}">${ch.difficulty}</span></div><div class="tiny muted" style="margin-top:4px">${done}/${ch.lessons.length} bài hoàn thành • ${unlocked?'🔓 Đã mở':'🔒 Hoàn thành chương trước để mở'}</div></div><strong>${Math.round(done/ch.lessons.length*100)}%</strong></div><div class="progress" style="margin-top:9px"><span style="width:${done/ch.lessons.length*100}%"></span></div></div>
+      <div class="lesson-list">${ch.lessons.map((l,i)=>{
+        const isDone=state.completedLessons.includes(l[0]);
+        return `<div class="lesson-item ${isDone?'done':''} ${!unlocked?'locked':''}">
+          <div class="number">${isDone?'✓':i+1}</div><div><strong>${escapeHtml(l[1])}</strong><div class="tiny muted">${escapeHtml(l[2])}</div></div>
+          <button class="btn ${isDone?'success':'blue'}" ${unlocked?'':'disabled'} data-open-lesson="${l[0]}">${isDone?'ÔN LẠI':'HỌC'}</button></div>`
+      }).join('')}</div></div>`
+  }).join('');
+  area.querySelectorAll('[data-open-lesson]').forEach(b=>b.onclick=()=>{if(!b.disabled)openLesson(b.dataset.openLesson)});
+}
+function lessonById(id){ for(const c of chapters){const l=c.lessons.find(x=>x[0]===id);if(l)return {chapter:c,lesson:l};} return null; }
+function openLesson(id){
+  const found=lessonById(id); if(!found)return;
+  currentLesson=id; currentView='learning'; navigate('learning');
+}
+function renderLessonPanel(id){
+  const found=lessonById(id); if(!found){currentLesson=null;renderChapterList();return}
+  const [lid,title,desc,example,challenge,kind]=found.lesson;
+  const done=state.completedLessons.includes(lid);
+  const area=document.getElementById('lessonArea');
+  let challengeDefault = challengeStarter(kind);
+  area.innerHTML=`<div class="between" style="margin-bottom:12px"><button class="btn" id="backLessons">← Tất cả bài</button><div class="row"><span class="badge">CHƯƠNG ${found.chapter.id}</span><span class="badge">${found.chapter.difficulty}</span></div></div>
+  <div class="lesson-layout">
+    <article class="card lesson-content">
+      <div class="badge">Bài học</div><h2>${escapeHtml(title)}</h2><p class="muted">${escapeHtml(desc)}</p>
+      <h3>1. Lý thuyết</h3><p>${theoryFor(kind,title)}</p>
+      <h3>2. Ví dụ</h3><pre>${escapeHtml(example.replaceAll('\\\\n','\\n'))}</pre>
+      <h3>3. Kết quả</h3><div class="card" style="background:white;color:#111;min-height:90px">${exampleResult(kind)}</div>
+      <h3>4. Giải thích code</h3><p>${explainFor(kind)}</p>
+    </article>
+    <aside>
+      <div class="card challenge"><div class="badge">🎯 Thử thách</div><h3>${escapeHtml(challenge)}</h3><p class="tiny muted">Hãy tự viết code. Hệ thống kiểm tra các yêu cầu cốt lõi và sẽ đưa gợi ý trước khi lộ đáp án.</p>
+      <textarea id="challengeCode" spellcheck="false">${escapeHtml(challengeDefault)}</textarea>
+      <div class="toolbar" style="margin-top:9px"><button class="btn blue" id="checkChallenge">🔍 KIỂM TRA</button><button class="btn" id="hintBtn">💡 GỢI Ý</button><button class="btn" id="showAnswer">👁 XEM ĐÁP ÁN</button></div>
+      <div id="challengeResult"></div></div>
+      <div class="card" style="margin-top:12px"><div class="between"><strong>Tiến độ bài</strong><span class="badge ${done?'success':''}">${done?'✅ Đã hoàn thành':'🟡 Chưa hoàn thành'}</span></div><div class="progress" style="margin-top:10px"><span style="width:${done?'100':'0'}%"></span></div><button class="btn success" id="completeBtn" style="width:100%;margin-top:10px">${done?'ĐÃ HOÀN THÀNH':'ĐÁNH DẤU HOÀN THÀNH +50 XP'}</button></div>
+    </aside>
+  </div>`;
+  document.getElementById('backLessons').onclick=()=>{currentLesson=null;renderLearning()};
+  document.getElementById('completeBtn').onclick=()=>{if(!done)completeLesson(lid);else toast('Bài này đã hoàn thành. Bạn có thể ôn lại!')};
+  document.getElementById('checkChallenge').onclick=()=>checkChallenge(kind,document.getElementById('challengeCode').value,document.getElementById('challengeResult'));
+  document.getElementById('hintBtn').onclick=()=>showHint(kind,document.getElementById('challengeResult'));
+  document.getElementById('showAnswer').onclick=()=>showAnswer(kind,document.getElementById('challengeResult'));
+}
+function challengeStarter(kind){
+  const map={
+    h1:'<h1>My Website</h1>',structure:'<!DOCTYPE html>\\n<html lang="vi">\\n<head><title>My Site</title></head>\\n<body></body>\\n</html>',
+    'html-tag':'<html lang="vi"></html>',head:'<head><title>My Website</title></head>',body:'<body><p>Welcome!</p></body>',heading:'<h1>My Website</h1>\\n<h2>About Me</h2>',
+    p:'<p>I love HTML!</p>',br:'Hello<br>World',strong:'<strong>Important</strong>',b:'<b>Bold Text</b>','i-em':'<i>Note</i>\\n<em>Warning</em>','u-mark-small':'<mark>HTML</mark>',del:'<del>Old</del>','sub-sup':'H<sub>2</sub>O\\nX<sup>2</sup>',
+    a:'<a href="https://google.com">Google</a>',href:'<a href="/about.html">About</a>',img:'<img src="photo.jpg" alt="My photo">',alt:'<img src="avatar.png" alt="My avatar">',relative:'<img src="images/logo.png" alt="Logo">',
+    ul:'<ul><li>Rice</li><li>Noodles</li><li>Pizza</li></ul>',ol:'<ol><li>Step 1</li><li>Step 2</li><li>Step 3</li></ol>',li:'<ul><li>HTML</li></ul>',
+    table:'<table><tr><th>Name</th><th>Age</th></tr><tr><td>Alex</td><td>13</td></tr></table>',trtdth:'<tr><td>HTML</td><td>Easy</td></tr>',span:'<td colspan="2">Total</td>',
+    form:'<form><input type="text"></form>',input:'<input type="email" placeholder="Your email">',label:'<label for="username">Username</label>\\n<input id="username">',select:'<select><option>Vietnam</option><option>Japan</option></select>',button:'<button type="submit">Register</button>',
+    header:'<header><h1>My Site</h1></header>',nav:'<nav><a href="/">Home</a></nav>',main:'<main><h1>Content</h1></main>',section:'<section><h2>News</h2></section>',footer:'<footer>© 2026</footer>',
+    audio:'<audio controls></audio>',video:'<video controls width="480"></video>',iframe:'<iframe title="Demo" src="about:blank"></iframe>',
+    meta:'<meta charset="UTF-8">','date':'<input type="date">',data:'<button data-id="42">Open</button>','a11y-lang':'<html lang="vi"></html>','a11y-alt':'<img src="profile.jpg" alt="Profile photo">','a11y-label':'<label for="email">Email</label><input id="email">',
+    'seo-title':'<title>My Website</title>','seo-headings':'<h1>Main</h1><h2>Section</h2>','seo-link':'<a href="/docs">HTML Docs</a>',
+    'real-layout':'<header><h1>My Site</h1></header>\\n<main><section><h2>About</h2></section></main>\\n<footer>© 2026</footer>',
+    'real-profile':'<h1>About Me</h1>\\n<p>I am a student.</p>','real-school':'<section><h2>My School</h2><ul><li>Class 7</li></ul></section>',
+    'real-portfolio':'<main><h1>My Portfolio</h1><section><h2>Projects</h2></section></main>'
+  }; return (map[kind]||'');
+}
+function normalizeHtml(s){return s.replace(/\\s+/g,' ').trim().toLowerCase();}
+function checkChallenge(kind,code,el){
+  const c=normalizeHtml(code);
+  let ok=false, hint='', reason='';
+  const tests={
+    h1:[/<h1\\b[^>]*>\\s*my website\\s*<\\/h1>/i,'Bạn cần dùng thẻ <h1> và đúng nội dung "My Website".','h1'],structure:[/<html\\b/i,/<head\\b/i,/<title\\b/i,/<body\\b/i].every?.bind(null):null
+  };
+  switch(kind){
+    case 'h1': ok=/<h1\\b[^>]*>\\s*my website\\s*<\\/h1>/i.test(code);hint='Gợi ý: kiểm tra thẻ mở/đóng <h1>.';break;
+    case 'structure':ok=/<html\\b/i.test(code)&&/<head\\b/i.test(code)&&/<title\\b[^>]*>\\s*my site\\s*<\\/title>/i.test(code)&&/<body\\b/i.test(code);hint='Gợi ý: cấu trúc chuẩn gồm html → head → body.';break;
+    case 'html-tag':ok=/<html\\b[^>]*lang=["\']vi["\']/i.test(code);hint='Gợi ý: thêm lang="vi" vào thẻ html.';break;
+    case 'head':ok=/<head\\b/i.test(code)&&/<title\\b[^>]*>\\s*my website\\s*<\\/title>/i.test(code);hint='Gợi ý: title phải nằm trong head.';break;
+    case 'body':ok=/<body\\b[\s\S]*<p>\s*welcome!\s*<\\/p>[\s\S]*<\\/body>/i.test(code);hint='Gợi ý: đặt p "Welcome!" bên trong body.';break;
+    case 'heading':ok=/<h1\\b[^>]*>\\s*my website\\s*<\\/h1>/i.test(code)&&/<h2\\b[^>]*>\\s*about me\\s*<\\/h2>/i.test(code);hint='Gợi ý: cần cả h1 và h2.';break;
+    case 'p':ok=/<p\\b[^>]*>\\s*i love html!\s*<\\/p>/i.test(code);hint='Gợi ý: dùng <p> ... </p>.';break;
+    case 'br':ok=/hello\s*<br\\s*\/?>\s*world/i.test(code);hint='Gợi ý: <br> đặt giữa Hello và World.';break;
+    case 'strong':ok=/<strong\\b[^>]*>\\s*important\\s*<\\/strong>/i.test(code);hint='Gợi ý: dùng strong.';break;
+    case 'b':ok=/<b\\b[^>]*>\\s*bold text\\s*<\\/b>/i.test(code);hint='Gợi ý: dùng b.';break;
+    case 'i-em':ok=/<i\\b[^>]*>\s*note\s*<\\/i>/i.test(code)&&/<em\\b[^>]*>\s*warning\s*<\\/em>/i.test(code);hint='Gợi ý: cần cả i "Note" và em "Warning".';break;
+    case 'u-mark-small':ok=/<mark\\b[^>]*>\s*html\s*<\\/mark>/i.test(code);hint='Gợi ý: dùng <mark>HTML</mark>.';break;
+    case 'del':ok=/<del\\b[^>]*>\s*old\s*<\\/del>/i.test(code);hint='Gợi ý: dùng del.';break;
+    case 'sub-sup':ok=/<sub\\b[^>]*>\s*2\s*<\\/sub>/i.test(code)&&/<sup\\b[^>]*>\s*2\s*<\\/sup>/i.test(code);hint='Gợi ý: cần sub và sup.';break;
+    case 'a':ok=/<a\\b[^>]*href=["\']https:\/\/google\.com["\'][^>]*>\s*google\s*<\\/a>/i.test(code);hint='Gợi ý: href phải là https://google.com.';break;
+    case 'href':ok=/<a\\b[^>]*href=["\']\/about\.html["\'][^>]*>\s*about\s*<\\/a>/i.test(code);hint='Gợi ý: href="/about.html".';break;
+    case 'img':ok=/<img\\b[^>]*src=["\']photo\.jpg["\'][^>]*alt=["\']my photo["\'][^>]*>/i.test(code);hint='Gợi ý: cần src và alt đúng.';break;
+    case 'alt':ok=/<img\\b[^>]*alt=["\']my avatar["\'][^>]*>/i.test(code);hint='Gợi ý: alt="My avatar".';break;
+    case 'relative':ok=/src=["\']images\/logo\.png["\']/i.test(code);hint='Gợi ý: src="images/logo.png".';break;
+    case 'ul':ok=/<ul\\b/i.test(code)&&['rice','noodles','pizza'].every(x=>new RegExp('<li[^>]*>\\s*'+x+'\\s*<\\\\/li>','i').test(code));hint='Gợi ý: ul chứa 3 li: Rice, Noodles, Pizza.';break;
+    case 'ol':ok=/<ol\\b/i.test(code)&&/step 1/i.test(code)&&/step 2/i.test(code)&&/step 3/i.test(code);hint='Gợi ý: dùng ol và 3 li.';break;
+    case 'li':ok=/<ul\\b/i.test(code)&&/<li\\b[^>]*>\\s*html\\s*<\\/li>/i.test(code);hint='Gợi ý: li phải nằm trong ul.';break;
+    case 'table':ok=/<table\\b/i.test(code)&&/<th\\b/i.test(code)&&/name/i.test(code)&&/age/i.test(code)&&/alex/i.test(code)&&/13/i.test(code);hint='Gợi ý: table cần hàng tiêu đề Name/Age và một hàng Alex/13.';break;
+    case 'trtdth':ok=/<tr\\b/i.test(code)&&/<td\\b[^>]*>\s*html\s*<\\/td>/i.test(code)&&/<td\\b[^>]*>\s*easy\s*<\\/td>/i.test(code);hint='Gợi ý: một tr có hai td.';break;
+    case 'span':ok=/<td\\b[^>]*colspan=["\']2["\'][^>]*>\s*total\s*<\\/td>/i.test(code);hint='Gợi ý: colspan="2".';break;
+    case 'form':ok=/<form\\b/i.test(code)&&/<input\\b[^>]*type=["\']text["\']/i.test(code);hint='Gợi ý: form bọc input type="text".';break;
+    case 'input':ok=/<input\\b[^>]*type=["\']email["\'][^>]*placeholder=["\']your email["\'][^>]*>/i.test(code);hint='Gợi ý: type=email + placeholder="Your email".';break;
+    case 'label':ok=/<label\\b[^>]*for=["\']username["\'][^>]*>\s*username\s*<\\/label>/i.test(code)&&/<input\\b[^>]*id=["\']username["\']/i.test(code);hint='Gợi ý: label for phải trùng id.';break;
+    case 'select':ok=/<select\\b/i.test(code)&&/option[^>]*>\s*vietnam\s*<\\/option>/i.test(code)&&/option[^>]*>\s*japan\s*<\\/option>/i.test(code);hint='Gợi ý: thêm hai option.';break;
+    case 'button':ok=/<button\\b[^>]*type=["\']submit["\'][^>]*>\s*register\s*<\\/button>/i.test(code);hint='Gợi ý: button type="submit".';break;
+    case 'header':ok=/<header\\b[\s\S]*<h1\\b[^>]*>\s*my site\s*<\\/h1>[\s\S]*<\\/header>/i.test(code);hint='Gợi ý: h1 nằm trong header.';break;
+    case 'nav':ok=/<nav\\b[\s\S]*<a\\b[^>]*>\s*home\s*<\\/a>[\s\S]*<\\/nav>/i.test(code);hint='Gợi ý: nav chứa link Home.';break;
+    case 'main':ok=/<main\\b[\s\S]*<h1\\b[^>]*>\s*content\s*<\\/h1>[\s\S]*<\\/main>/i.test(code);hint='Gợi ý: main chứa h1 Content.';break;
+    case 'section':ok=/<section\\b[\s\S]*<h2\\b[^>]*>\s*news\s*<\\/h2>[\s\S]*<\\/section>/i.test(code);hint='Gợi ý: section chứa h2 News.';break;
+    case 'footer':ok=/<footer\\b[\s\S]*©\s*2026[\s\S]*<\\/footer>/i.test(code);hint='Gợi ý: footer có © 2026.';break;
+    case 'audio':ok=/<audio\\b[^>]*controls/i.test(code);hint='Gợi ý: audio phải có thuộc tính controls.';break;
+    case 'video':ok=/<video\\b[^>]*controls[^>]*width=["\']480["\']/i.test(code)||(/<video\\b/i.test(code)&&/controls/i.test(code)&&/width=["\']480["\']/i.test(code));hint='Gợi ý: video controls width="480".';break;
+    case 'iframe':ok=/<iframe\\b[^>]*title=["\']demo["\']/i.test(code);hint='Gợi ý: thêm title="Demo".';break;
+    case 'meta':ok=/<meta\\b[^>]*charset=["\']utf-8["\']/i.test(code);hint='Gợi ý: <meta charset="UTF-8">.';break;
+    case 'date':ok=/<input\\b[^>]*type=["\']date["\']/i.test(code);hint='Gợi ý: type="date".';break;
+    case 'data':ok=/<button\\b[^>]*data-id=["\']42["\']/i.test(code);hint='Gợi ý: data-id="42".';break;
+    case 'a11y-lang':ok=/<html\\b[^>]*lang=["\']vi["\']/i.test(code);hint='Gợi ý: lang="vi".';break;
+    case 'a11y-alt':ok=/<img\\b[^>]*alt=["\']profile photo["\']/i.test(code);hint='Gợi ý: alt="Profile photo".';break;
+    case 'a11y-label':ok=/<label\\b[^>]*for=["\']email["\'][^>]*>\s*email\s*<\\/label>/i.test(code)&&/<input\\b[^>]*id=["\']email["\']/i.test(code);hint='Gợi ý: for="email" liên kết id="email".';break;
+    case 'seo-title':ok=/<title\\b[^>]*>\s*my website\s*<\\/title>/i.test(code);hint='Gợi ý: dùng <title>My Website</title>.';break;
+    case 'seo-headings':ok=/<h1\\b[^>]*>\s*main\s*<\\/h1>/i.test(code)&&/<h2\\b[^>]*>\s*section\s*<\\/h2>/i.test(code);hint='Gợi ý: h1 Main, sau đó h2 Section.';break;
+    case 'seo-link':ok=/<a\\b[^>]*href=["\']\/docs["\'][^>]*>\s*html docs\s*<\\/a>/i.test(code);hint='Gợi ý: anchor text "HTML Docs".';break;
+    case 'real-layout':ok=/<header\\b/i.test(code)&&/<main\\b/i.test(code)&&/<footer\\b/i.test(code);hint='Gợi ý: cần đủ header, main, footer.';break;
+    case 'real-profile':ok=/<h1\\b[^>]*>\s*about me\s*<\\/h1>/i.test(code)&&/<p\\b[^>]*>\s*i am a student\.\s*<\\/p>/i.test(code);hint='Gợi ý: cần h1 và p với đúng nội dung.';break;
+    case 'real-school':ok=/<section\\b/i.test(code)&&/<h2\\b[^>]*>\s*my school\s*<\\/h2>/i.test(code)&&/<li\\b[^>]*>\s*class 7\s*<\\/li>/i.test(code);hint='Gợi ý: section + h2 My School + li Class 7.';break;
+    case 'real-portfolio':ok=/<main\\b/i.test(code)&&/<h1\\b[^>]*>\s*my portfolio\s*<\\/h1>/i.test(code)&&/<section\\b[\s\S]*<h2\\b[^>]*>\s*projects\s*<\\/h2>/i.test(code);hint='Gợi ý: main chứa h1 và section h2 Projects.';break;
+    default: ok=false; hint='Gợi ý: hãy bám sát yêu cầu của đề bài.'
+  }
+  if(ok){ el.className='result ok'; el.innerHTML=`<strong>✅ Chính xác!</strong><div class="tiny muted">Code đáp ứng các yêu cầu cốt lõi. Bạn có thể đánh dấu hoàn thành để nhận +50 XP.</div>`; state.practiceRuns++; updateAchievements(); saveState(); }
+  else { el.className='result bad'; el.innerHTML=`<strong>❌ Chưa chính xác.</strong><div class="tiny muted">${escapeHtml(hint)}</div>`; }
+}
+function showHint(kind,el){
+  const hints={
+    h1:'Hãy nhớ cú pháp: <h1>Nội dung</h1>.',structure:'Khung cơ bản: <!DOCTYPE html> → html → head → title → body.',
+    'html-tag':'Thuộc tính lang nằm ngay trong thẻ mở html.',head:'Title nằm bên trong head.',body:'Body là phần hiển thị; đặt một p Welcome! vào đó.'
+  };
+  el.className='result'; el.innerHTML=`💡 <strong>Gợi ý:</strong> ${escapeHtml(hints[kind]||'Đọc kỹ yêu cầu: xác định thẻ, thuộc tính và nội dung cần có.')}`;
+}
+function showAnswer(kind,el){
+  const ans=challengeStarter(kind).replaceAll('\\\\n','\\n');
+  el.className='result'; el.innerHTML=`<strong>👁 Đáp án tham khảo</strong><pre style="margin-top:8px;white-space:pre-wrap">${escapeHtml(ans)}</pre>`;
+}
+function theoryFor(kind,title){
+  const map={h1:'HTML dùng các thẻ để mô tả cấu trúc và ý nghĩa nội dung. H1 là cấp heading cao nhất nên thường dùng cho tiêu đề chính của trang hoặc phần nội dung.',structure:'Một tài liệu HTML chuẩn thường có doctype, phần tử html, head và body. Head chứa thông tin cho trình duyệt; body chứa nội dung hiển thị.',a:'Thẻ a tạo liên kết. Thuộc tính href xác định nơi người dùng sẽ đi tới khi nhấp.',img:'Thẻ img nhúng hình ảnh bằng src. Alt mô tả hình ảnh cho trường hợp ảnh không tải hoặc người dùng dùng trình đọc màn hình.',form:'Form nhóm các control nhập liệu và cung cấp ngữ cảnh cho việc gửi dữ liệu.',label:'Label mô tả một control và liên kết với input bằng for/id để tăng khả năng sử dụng và accessibility.',table:'Table dùng để biểu diễn dữ liệu dạng hàng và cột; không nên dùng table chỉ để bố trí giao diện.',header:'Semantic HTML giúp mô tả vai trò của các vùng trong trang thay vì chỉ dùng div.',meta:'Meta element cung cấp metadata như encoding và viewport mà không trực tiếp hiển thị.','seo-title':'Title của tài liệu là tín hiệu quan trọng để mô tả trang và cũng xuất hiện trên tab trình duyệt.','real-layout':'Khi ghép nhiều semantic element, bạn có thể xây một cấu trúc trang có ý nghĩa và dễ bảo trì.'}; return map[kind]||`Bài "${title}" tập trung vào một phần tử hoặc kỹ thuật HTML. Hãy quan sát cú pháp, thuộc tính và vị trí của nó trong tài liệu.`;
+}
+function explainFor(kind){
+  const map={h1:'<h1> là thẻ mở, nội dung nằm giữa cặp thẻ, và </h1> đóng phần tử.','structure':'DOCTYPE báo cho trình duyệt dùng chuẩn HTML hiện đại; html là phần tử gốc, head chứa metadata, body chứa giao diện.',a:'href là thuộc tính đích. Text giữa <a> và </a> là anchor text mà người dùng nhìn thấy.',img:'img không có thẻ đóng. src là đường dẫn ảnh, alt là mô tả thay thế.',label:'for của label phải trùng id của control thì hai phần tử được liên kết.',table:'tr tạo hàng; th tạo ô tiêu đề; td tạo ô dữ liệu.',header:'header là vùng đầu của tài liệu/section; semantic tag cung cấp ý nghĩa cho cấu trúc.',meta:'charset khai báo encoding; viewport giúp trang thích ứng với màn hình.',form:'form bao quanh input và các control liên quan.'}; return map[kind]||'Xác định phần tử chính, các thuộc tính quan trọng và mục đích của nó. Hãy thử thay đổi một phần code trong Playground để quan sát kết quả.';
+}
+function exampleResult(kind){
+  const safe=challengeStarter(kind).replaceAll('\\\\n','\\n');
+  if(kind==='img'||kind==='a'||kind==='iframe'||kind==='audio'||kind==='video') return `<div style="font-family:var(--mono);font-size:12px;color:#222">${escapeHtml(safe)}</div><div style="margin-top:8px;color:#555;font-size:12px">Một số tài nguyên có thể không hiển thị khi mở file offline.</div>`;
+  if(kind==='structure'||kind==='html-tag'||kind==='head'||kind==='body'||kind==='meta') return `<div style="color:#222;font-family:var(--mono);white-space:pre-wrap;font-size:12px">${escapeHtml(safe)}</div>`;
+  const iframe=`<iframe sandbox="" style="width:100%;border:0;height:75px;background:white" srcdoc="${escapeHtml(safe)}"></iframe>`;
+  return iframe;
+}
+
+function renderPlayground(){
+  const el=document.getElementById('view-playground');
+  if(!el.dataset.bound){
+    el.innerHTML=`<div class="between"><div><h2 style="margin:0">💻 HTML CODE PLAYGROUND</h2><p class="muted">Viết HTML và xem kết quả ngay trong sandbox riêng.</p></div><span class="badge">🔒 Preview sandboxed</span></div>
+      <div class="playground" style="margin-top:15px">
+        <div class="card editor-wrap"><div class="between"><strong>CODE EDITOR</strong><span id="runStatus" class="tiny muted">Chưa chạy</span></div>
+          <div class="toolbar" style="margin-top:9px"><button class="btn blue" id="runCode">▶ RUN</button><button class="btn" id="resetCode">🔄 Reset</button><button class="btn" id="copyCode">📋 Copy</button><button class="btn" id="saveCode">💾 Save</button><button class="btn" id="clearCode">🧹 Clear</button><button class="btn" id="analyzeCode">🤖 AI CHECK</button></div>
+          <textarea id="editor" class="editor" spellcheck="false"></textarea><div id="codeFeedback" class="result" style="margin-top:10px">💡 Hãy chạy code để nhận phản hồi.</div></div>
+        <div class="card preview-wrap"><div class="between"><strong>LIVE PREVIEW</strong><span class="tiny muted">iframe sandbox</span></div><iframe id="preview" class="preview-frame" sandbox="allow-forms"></iframe></div>
+      </div>
+      <div class="grid grid-3" style="margin-top:15px">
+        <div class="card"><strong>⚡ Code Challenge</strong><p class="tiny muted">Chọn một thử thách và mở bài học tương ứng.</p><button class="btn" id="openChallenge">Mở thử thách gần nhất</button></div>
+        <div class="card"><strong>🛡 An toàn</strong><p class="tiny muted">Preview chạy trong iframe sandbox và không được cấp quyền truy cập storage/cookies/DOM của app.</p></div>
+        <div class="card"><strong>💾 Saved Code</strong><p class="tiny muted">Mẫu code cuối cùng được lưu trong localStorage.</p><button class="btn" id="restoreSaved">Khôi phục code</button></div>
+      </div>`;
+    el.dataset.bound='1';
+    const saved=localStorage.getItem('html_lab_editor');
+    document.getElementById('editor').value=saved||`<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Website</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>Welcome to my website!</p>
+</body>
+</html>`;
+    bindPlayground();
+  }
+}
+function bindPlayground(){
+  const editor=document.getElementById('editor'), frame=document.getElementById('preview');
+  document.getElementById('runCode').onclick=()=>runCode();
+  document.getElementById('resetCode').onclick=()=>{editor.value=`<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>My Website</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+</body>
+</html>`;runCode()};
+  document.getElementById('copyCode').onclick=async()=>{try{await navigator.clipboard.writeText(editor.value);toast('📋 Đã copy code');}catch(e){toast('Không thể copy tự động trên trình duyệt này.')}};
+  document.getElementById('saveCode').onclick=()=>{localStorage.setItem('html_lab_editor',editor.value);state.practiceRuns++;updateAchievements();saveState();toast('💾 Đã lưu code vào localStorage')};
+  document.getElementById('clearCode').onclick=()=>{editor.value='';frame.srcdoc='';document.getElementById('codeFeedback').className='result';document.getElementById('codeFeedback').textContent='🧹 Đã xóa.'};
+  document.getElementById('analyzeCode').onclick=()=>analyzeUserCode(editor.value);
+  document.getElementById('openChallenge').onclick=()=>{const rec=aiRecommendation();if(rec.target!=='project')openLesson(rec.target);else openProjectModal()};
+  document.getElementById('restoreSaved').onclick=()=>{const s=localStorage.getItem('html_lab_editor');if(s){editor.value=s;toast('💾 Đã khôi phục code');runCode()}else toast('Chưa có code đã lưu.')};
+  editor.addEventListener('input',()=>localStorage.setItem('html_lab_editor_draft',editor.value));
+}
+function runCode(){
+  const code=document.getElementById('editor').value, frame=document.getElementById('preview');
+  frame.srcdoc=code; document.getElementById('runStatus').textContent='Đã chạy '+new Date().toLocaleTimeString('vi-VN');
+  state.practiceRuns++; addXP(10,'Thử nghiệm code'); analyzeUserCode(code); saveState();
+}
+function analyzeUserCode(code){
+  const out=document.getElementById('codeFeedback'), c=code.trim();
+  if(!c){out.className='result bad';out.innerHTML='<strong>❌ Chưa có code.</strong><div class="tiny muted">Hãy nhập một đoạn HTML trước.</div>';return}
+  const unclosed=[];
+  const tags=['html','head','body','title','h1','h2','h3','h4','h5','h6','p','strong','em','b','i','u','mark','small','del','a','ul','ol','li','table','tr','td','th','form','label','button','header','nav','main','section','article','footer'];
+  tags.forEach(t=>{const opens=(c.match(new RegExp('<'+t+'\\b','gi'))||[]).length;const closes=(c.match(new RegExp('</'+t+'>','gi'))||[]).length;if(opens>closes)unclosed.push(t)});
+  if(unclosed.length){
+    out.className='result bad'; out.innerHTML=`<strong>❌ Có thể có lỗi cấu trúc.</strong><div class="tiny muted">Thiếu thẻ đóng cho: ${unclosed.map(x=>'&lt;'+x+'&gt;').join(', ')}. Hãy kiểm tra kỹ trước khi chạy project.</div>`;return;
+  }
+  const tips=[];
+  if(/<img\\b(?![^>]*\\balt=)/i.test(c))tips.push('Thêm alt cho ảnh để hỗ trợ accessibility.');
+  if(/<a\\b(?![^>]*\\bhref=)/i.test(c))tips.push('Kiểm tra href của các liên kết.');
+  if(!/<html\\b/i.test(c)||!/<body\\b/i.test(c))tips.push('Code chạy được, nhưng có thể cải thiện bằng cấu trúc HTML hoàn chỉnh.');
+  if(!/<meta[^>]+charset=/i.test(c)&&/<html\\b/i.test(c))tips.push('Cân nhắc thêm meta charset="UTF-8".');
+  out.className=tips.length?'result':'result ok';out.innerHTML=tips.length?`<strong>⚠️ Code chạy được.</strong><div class="tiny muted">${tips.join('<br>')}</div>`:`<strong>✅ Code hợp lệ ở mức kiểm tra cơ bản.</strong><div class="tiny muted">Bạn đang dùng cấu trúc HTML hợp lý. Hãy tiếp tục tối ưu semantics và accessibility.</div>`;
+}
+
+let resourceFilter='All', resourceSearch='';
+function renderResources(){
+  const cats=['Tất cả','HTML Basics','HTML Tags','Forms','Tables','Multimedia','HTML5','Semantic HTML','Accessibility','SEO','Projects','Tips & Tricks'];
+  const diffs=['All','Beginner','Intermediate','Advanced','Expert'];
+  const list=resources.filter(r=>(resourceSearch===''||`${r.title} ${r.desc} ${r.cat}`.toLowerCase().includes(resourceSearch.toLowerCase()))&&(resourceFilter==='All'||resourceFilter===r.difficulty||resourceFilter===r.cat||resourceFilter===r.cat));
+  document.getElementById('view-resources').innerHTML=`<div class="between"><div><h2 style="margin:0">📦 HTML RESOURCE LIBRARY</h2><p class="muted">Nguồn tích hợp sẵn + liên kết nguồn uy tín. Không bịa dữ liệu trực tuyến.</p></div><button class="btn blue" id="onlineBtn">🌐 NẠP NGUỒN ONLINE</button></div>
+    <div class="searchbar" style="margin-top:15px"><input id="resourceSearch" class="input" placeholder="🔍 Tìm kiếm HTML..." value="${escapeHtml(resourceSearch)}"><select id="diffFilter" class="select" style="max-width:180px">${diffs.map(d=>`<option ${resourceFilter===d?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="tabs" style="margin-top:10px">${cats.map(c=>`<button class="tab ${resourceFilter===c?'active':''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}</div>
+    <div class="resource-grid">${list.map(r=>`<article class="resource-card"><div class="row"><span class="badge">${escapeHtml(r.difficulty)}</span><span class="badge">${escapeHtml(r.cat)}</span></div><h3 style="margin-top:10px">${escapeHtml(r.title)}</h3><p>${escapeHtml(r.desc)}</p><div class="tiny muted">Source: ${escapeHtml(new URL(r.url===' #'?location.href:r.url,location.href).hostname)}</div><div class="actions" style="margin-top:10px"><a class="btn" href="${r.url}" target="_blank" rel="noopener">MỞ NGUỒN ↗</a></div></article>`).join('')||'<div class="empty" style="grid-column:1/-1">Không tìm thấy tài liệu phù hợp.</div>'}</div>
+    <div class="card" style="margin-top:15px"><strong>🌐 Trạng thái Internet</strong><p class="tiny muted">Phiên bản này luôn có fallback offline. Chức năng nạp tài nguyên online chỉ hoạt động khi trình duyệt/API cho phép truy cập web; không giả vờ rằng dữ liệu là live nếu không kết nối.</p><div id="onlineStatus" class="tiny muted"></div></div>`;
+  document.getElementById('resourceSearch').oninput=e=>{resourceSearch=e.target.value;renderResources()};
+  document.getElementById('diffFilter').onchange=e=>{resourceFilter=e.target.value;renderResources()};
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{resourceFilter=b.dataset.cat;renderResources()});
+  document.getElementById('onlineBtn').onclick=loadOnlineResources;
+}
+async function loadOnlineResources(){
+  const status=document.getElementById('onlineStatus');
+  const endpoint=(state.settings.onlineEndpoint||'').trim();
+  if(!endpoint){status.textContent='ℹ️ Chưa cấu hình API endpoint. Hãy vào Cài đặt → Online Resource API. Dữ liệu hiện tại vẫn là kho tích hợp sẵn.';return}
+  status.textContent='⏳ Đang thử gọi endpoint...';
+  try{
+    const res=await fetch(endpoint,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const count=Array.isArray(data)?data.length:(Array.isArray(data.resources)?data.resources.length:0);
+    status.textContent=`✅ Đã nhận dữ liệu thật từ endpoint (${count} mục). Ứng dụng không tự ghi đè kho tích hợp sẵn; hãy dùng format JSON chuẩn trong Cài đặt.`;
+    toast('🌐 Kết nối endpoint thành công');
+  }catch(e){
+    status.textContent='⚠️ Không thể tải online trong môi trường hiện tại. Đây không phải dữ liệu live; ứng dụng tiếp tục dùng fallback offline.';
+    toast('Không thể kết nối nguồn online');
+  }
+}
+
+function renderSchedule(){
+  const days=['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
+  const now=new Date();
+  const todayIdx=(now.getDay()+6)%7;
+  const events=state.schedule.map((x,i)=>({...x,index:i})).sort((a,b)=>(a.day-b.day)||a.time.localeCompare(b.time));
+  document.getElementById('view-schedule').innerHTML=`<div class="between"><div><h2 style="margin:0">📅 STUDY SCHEDULE</h2><p class="muted">Lịch học được lưu trong localStorage.</p></div><button class="btn blue" id="addSchedule">＋ THÊM LỊCH</button></div>
+    <div class="schedule-grid" style="margin-top:15px">${days.map((d,di)=>`<div class="day-col"><h4>${d}${di===todayIdx?' • HÔM NAY':''}</h4>${events.filter(e=>e.day===di).map(e=>{const status=scheduleStatus(e);return `<div class="event ${status.cls}"><div class="between"><strong>${escapeHtml(e.title)}</strong><span>${status.icon}</span></div><div class="tiny muted">${escapeHtml(e.time)} • ${e.duration} phút</div><div class="tiny" style="margin-top:7px">${status.text}</div><div class="actions" style="margin-top:7px"><button class="btn tiny" data-edit-schedule="${e.index}">Sửa</button><button class="btn danger tiny" data-del-schedule="${e.index}">Xóa</button></div></div>`}).join('')||'<div class="empty">Trống</div>'}</div>`).join('')}</div>
+    <div class="card" style="margin-top:15px"><strong>🔔 Nhắc học</strong><p class="tiny muted">Khi thời gian hiện tại khớp với lịch học trong ngày, ứng dụng sẽ báo trên màn hình và cho phép bắt đầu bài tương ứng.</p></div>`;
+  document.getElementById('addSchedule').onclick=()=>openScheduleModal();
+  document.querySelectorAll('[data-edit-schedule]').forEach(b=>b.onclick=()=>openScheduleModal(+b.dataset.editSchedule));
+  document.querySelectorAll('[data-del-schedule]').forEach(b=>b.onclick=()=>{if(confirm('Xóa lịch học này?')){state.schedule.splice(+b.dataset.delSchedule,1);saveState();renderSchedule();toast('🗑 Đã xóa lịch')}}); 
+}
+function scheduleStatus(e){
+  const now=new Date(), day=(now.getDay()+6)%7;
+  if(e.completedDates?.includes(todayKey()))return {cls:'done',icon:'🟢',text:'Đã hoàn thành hôm nay'};
+  if(e.day!==day)return {cls:'',icon:e.day<day?'⚪':'🟡',text:e.day<day?'Lịch đã qua trong tuần':'Sắp học'};
+  const [h,m]=e.time.split(':').map(Number), start=new Date();start.setHours(h,m,0,0);const end=new Date(start.getTime()+e.duration*60000);
+  if(now>=start&&now<=end)return {cls:'done',icon:'🔔',text:'Đến giờ học — Bắt đầu ngay'};
+  if(now>end)return {cls:'missed',icon:'🔴',text:'Đã bỏ lỡ khung giờ'};
+  return {cls:'',icon:'🟡',text:'Sắp học hôm nay'};
+}
+function openScheduleModal(editIndex=null){
+  const x=editIndex!=null?state.schedule[editIndex]:{day:0,time:'19:00',duration:60,title:'HTML Basics',lessonId:''};
+  const options=chapters.flatMap(c=>c.lessons).map(l=>`<option value="${l[0]}" ${x.lessonId===l[0]?'selected':''}>${escapeHtml(l[1])}</option>`).join('');
+  showModal(`<div class="between"><h3>${editIndex==null?'＋ Thêm lịch':'✏️ Sửa lịch'}</h3><button class="icon-btn" onclick="closeModal()">✕</button></div>
+  <div class="form-grid" style="margin-top:15px">
+    <div class="form-group"><label>Ngày</label><select id="sDay" class="select">${['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'].map((d,i)=>`<option value="${i}" ${x.day===i?'selected':''}>${d}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Giờ</label><input id="sTime" class="input" type="time" value="${x.time}"></div>
+    <div class="form-group"><label>Thời lượng (phút)</label><input id="sDur" class="input" type="number" min="10" max="300" value="${x.duration}"></div>
+    <div class="form-group"><label>Nội dung</label><input id="sTitle" class="input" value="${escapeHtml(x.title)}"></div>
+    <div class="form-group" style="grid-column:1/-1"><label>Bài học liên kết</label><select id="sLesson" class="select"><option value="">— Không liên kết —</option>${options}</select></div>
+  </div><div class="actions" style="margin-top:15px"><button class="btn primary" id="saveSchedule">Lưu lịch</button><button class="btn" onclick="closeModal()">Hủy</button></div>`);
+  document.getElementById('saveSchedule').onclick=()=>{
+    const item={day:+document.getElementById('sDay').value,time:document.getElementById('sTime').value,duration:Math.max(10,+document.getElementById('sDur').value||60),title:document.getElementById('sTitle').value.trim()||'HTML Study',lessonId:document.getElementById('sLesson').value,completedDates:x.completedDates||[]};
+    if(editIndex==null)state.schedule.push(item);else state.schedule[editIndex]=item;saveState();closeModal();renderSchedule();toast('📅 Đã lưu lịch học');
+  };
+}
+function maybeNotifySchedule(){
+  const now=new Date(), day=(now.getDay()+6)%7, t=now.toTimeString().slice(0,5);
+  const match=state.schedule.find(e=>e.day===day&&e.time===t&&!e.completedDates?.includes(todayKey()));
+  if(match){ toast(`🔔 Đến giờ học HTML: ${match.title}`); }
+}
+
+function renderProgress(){
+  const chapterRows=chapters.map(c=>{const done=c.lessons.filter(l=>state.completedLessons.includes(l[0])).length;return {name:c.title,p:Math.round(done/c.lessons.length*100),done,total:c.lessons.length}}); 
+  document.getElementById('view-progress').innerHTML=`<div class="between"><div><h2 style="margin:0">📊 MY PROGRESS</h2><p class="muted">Theo dõi kỹ năng, XP và thói quen học.</p></div><div class="badge">🏆 ${xpLevel()}</div></div>
+  <div class="grid grid-4" style="margin-top:15px">
+    <div class="card stat"><div class="label">Bài học</div><div class="value">${state.completedLessons.length}</div></div>
+    <div class="card stat"><div class="label">XP</div><div class="value">${state.XP}</div></div>
+    <div class="card stat"><div class="label">Streak</div><div class="value">${state.streak}</div><div class="sub">Kỷ lục ${state.longestStreak} ngày</div></div>
+    <div class="card stat"><div class="label">Thời gian</div><div class="value" style="font-size:20px">${humanMinutes(state.studyMinutes)}</div></div>
+  </div>
+  <div class="grid grid-2" style="margin-top:15px">
+    <div class="card"><div class="section-head" style="margin-top:0"><div><h3>Tiến độ theo chương</h3><p>Chương càng xanh, nền tảng càng vững.</p></div></div>${chapterRows.map(r=>`<div style="margin:12px 0"><div class="between tiny"><span>${escapeHtml(r.name)}</span><span>${r.p}%</span></div><div class="progress" style="margin-top:6px"><span style="width:${r.p}%"></span></div></div>`).join('')}</div>
+    <div class="card"><div class="section-head" style="margin-top:0"><div><h3>Hoạt động 7 ngày</h3><p>Mỗi cột là số lần hoàn thành bài trong ngày.</p></div></div><div class="chart">${state.weekly.map((v,i)=>`<div style="flex:1;display:flex;flex-direction:column;justify-content:end;gap:5px;text-align:center"><div class="bar" style="height:${Math.max(14,v*20)}px"><span>${v}</span></div><div class="tiny muted">${['T2','T3','T4','T5','T6','T7','CN'][i]}</div></div>`).join('')}</div></div>
+  </div>`;
+}
+function renderAchievements(){
+  const all=[
+    ['first-code','🏅','First Code','Chạy hoặc lưu đoạn code đầu tiên.'],['first-lesson','🏅','First Lesson','Hoàn thành bài học đầu tiên.'],['streak7','🔥','7 Day Streak','Học ít nhất một bài trong 7 ngày liên tiếp.'],['xp1000','⭐','1000 XP','Tích lũy 1000 XP.'],['first-project','🚀','First Project','Hoàn thành một mini project.'],['builder','🧱','HTML Builder','Hoàn thành 15 bài.'],['expert','🧠','HTML Expert','Hoàn thành 25 bài.'],['master','👑','HTML Master','Hoàn thành 90% lộ trình.']
+  ];
+  document.getElementById('view-achievements').innerHTML=`<div><h2 style="margin:0">🏆 ACHIEVEMENTS</h2><p class="muted">Huy hiệu được mở khóa tự động theo hoạt động thật.</p></div>
+  <div class="achievement-grid" style="margin-top:15px">${all.map(a=>{const got=state.achievements.includes(a[0]);return `<div class="ach ${got?'':'locked'}"><div class="emoji">${a[1]}</div><h4>${a[2]}</h4><p>${a[3]}</p><div class="badge ${got?'success':'lock'}" style="margin-top:9px">${got?'✅ Đã mở':'🔒 Chưa mở'}</div></div>`}).join('')}</div>`;
+}
+
+function renderSettings(){
+  const s=state.settings;
+  document.getElementById('view-settings').innerHTML=`<div><h2 style="margin:0">⚙️ SETTINGS</h2><p class="muted">Tùy chỉnh hồ sơ học tập và dữ liệu.</p></div>
+  <div class="grid grid-2" style="margin-top:15px">
+    <div class="card"><h3>🎓 Trình độ</h3><p class="tiny muted">AI learning path sẽ thay đổi theo trình độ.</p><select id="levelSetting" class="select">${Object.entries(LEVELS).map(([id,l])=>`<option value="${id}" ${+id===state.userLevel?'selected':''}>${l.icon} Level ${id} — ${l.name}</option>`).join('')}</select><button class="btn blue" id="saveLevel" style="margin-top:10px">Lưu trình độ</button></div>
+    <div class="card"><h3>🎨 Giao diện</h3><div class="row"><label class="badge"><input id="lightTheme" type="checkbox" ${s.theme==='light'?'checked':''}> Light mode</label><label class="badge">Font <input id="fontSize" type="number" min="12" max="22" value="${s.fontSize}" style="width:60px;background:transparent;color:var(--text);border:0"></label></div><button class="btn" id="saveTheme" style="margin-top:10px">Lưu giao diện</button></div>
+    <div class="card"><h3>🌐 Online Resource API</h3><p class="tiny muted">Đây là endpoint JSON tùy chọn. Ứng dụng chỉ gọi khi bạn tự cấu hình URL; không giả vờ là Google/AI live.</p><input id="onlineEndpoint" class="input" placeholder="https://your-api.example/resources" value="${escapeHtml(s.onlineEndpoint||'')}"><button class="btn" id="saveEndpoint" style="margin-top:10px">Lưu endpoint</button></div>
+    <div class="card"><h3>💻 Editor</h3><div class="form-group"><label>Tab size</label><select id="tabSize" class="select">${[2,4].map(v=>`<option ${s.editorTabSize===v?'selected':''}>${v}</option>`).join('')}</select></div><button class="btn" id="saveEditor" style="margin-top:10px">Lưu editor</button></div>
+    <div class="card"><h3>💾 Dữ liệu</h3><div class="actions"><button class="btn" id="exportData">Export JSON</button><label class="btn" style="position:relative;overflow:hidden">Import JSON<input id="importData" type="file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="btn danger" id="resetAll">Reset toàn bộ</button></div></div>
+  </div>`;
+  document.getElementById('saveLevel').onclick=()=>{state.userLevel=+document.getElementById('levelSetting').value;saveState();renderShell();navigate('dashboard');toast(`🎓 Đã đổi sang ${currentLevel().name}`)};
+  document.getElementById('saveTheme').onclick=()=>{state.settings.theme=document.getElementById('lightTheme').checked?'light':'dark';state.settings.fontSize=+document.getElementById('fontSize').value||16;document.documentElement.style.fontSize=state.settings.fontSize+'px';saveState();renderShell();toast('🎨 Đã lưu giao diện')};
+  document.getElementById('saveEndpoint').onclick=()=>{state.settings.onlineEndpoint=document.getElementById('onlineEndpoint').value.trim();saveState();toast('🌐 Đã lưu endpoint')};
+  document.getElementById('saveEditor').onclick=()=>{state.settings.editorTabSize=+document.getElementById('tabSize').value;saveState();toast('💻 Đã lưu cài đặt editor')};
+  document.getElementById('exportData').onclick=exportData;
+  document.getElementById('importData').onchange=e=>importData(e.target.files[0]);
+  document.getElementById('resetAll').onclick=()=>resetAll();
+}
+function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='html_code_lab_backup.json';a.click();URL.revokeObjectURL(a.href);toast('💾 Đã export dữ liệu');}
+function importData(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);state=Object.assign(defaultState(),x);saveState();location.reload();}catch(e){toast('❌ File JSON không hợp lệ')}};r.readAsText(file);}
+function resetAll(){if(!confirm('⚠️ Bạn có chắc chắn muốn xóa toàn bộ tiến độ, XP, streak, lịch và cài đặt?'))return;localStorage.removeItem(STORE);localStorage.removeItem('html_lab_editor');localStorage.removeItem('html_lab_editor_draft');location.reload();}
+
+function openQuizPicker(){
+  showModal(`<div class="between"><h3>🧠 Chọn chương để làm Quiz</h3><button class="icon-btn" onclick="closeModal()">✕</button></div><div class="lesson-list" style="margin-top:12px">${chapters.map(c=>`<button class="lesson-item ${unlockedChapter(c.id)?'':'locked'}" ${unlockedChapter(c.id)?'':'disabled'} data-quiz="${c.id}"><div class="number">${c.id}</div><div><strong>Chương ${c.id} — ${escapeHtml(c.title)}</strong><div class="tiny muted">${(quizzes[c.id]||[]).length} câu</div></div><span>${unlockedChapter(c.id)?'🔓':'🔒'}</span></button>`).join('')}</div>`);
+  document.querySelectorAll('[data-quiz]').forEach(b=>b.onclick=()=>openQuiz(+b.dataset.quiz));
+}
+function openQuiz(chId){
+  currentQuizChapter=chId;const qs=quizzes[chId]||[];
+  showModal(`<div class="between"><h3>🧠 Quiz — Chương ${chId}</h3><button class="icon-btn" onclick="closeModal()">✕</button></div><p class="tiny muted">Chọn đáp án tốt nhất. Điểm sẽ được lưu lại.</p><div id="quizBody">${qs.map((q,i)=>`<div class="card" style="margin:10px 0"><strong>Câu ${i+1}. ${escapeHtml(q[0])}</strong><div style="display:grid;gap:7px;margin-top:10px">${q[1].map((o,j)=>`<label class="badge" style="justify-content:flex-start;cursor:pointer"><input type="radio" name="q${i}" value="${j}"> ${escapeHtml(o)}</label>`).join('')}</div></div>`).join('')}</div><button class="btn primary" id="submitQuiz">NỘP BÀI</button><div id="quizResult"></div>`);
+  document.getElementById('submitQuiz').onclick=()=>{
+    let score=0;qs.forEach((q,i)=>{const picked=document.querySelector(`input[name="q${i}"]:checked`);if(picked&&+picked.value===q[2])score++});
+    state.quizScores[chId]={score,total:qs.length,date:new Date().toISOString()};updateStreak();addXP(score*20,'Hoàn thành quiz');saveState();
+    document.getElementById('quizResult').className='result '+(score/qs.length>=.7?'ok':'bad');document.getElementById('quizResult').innerHTML=`<strong>${score/qs.length>=.7?'✅ Tốt lắm!':'🟡 Hãy ôn lại thêm một chút.'}</strong><div>Score: ${score}/${qs.length} • +${score*20} XP</div>`;
+  };
+}
+function showModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalBackdrop').style.display='flex';}
+function closeModal(){document.getElementById('modalBackdrop').style.display='none'}
+window.closeModal=closeModal;
+
+function openProjectModal(){
+  showModal(`<div class="between"><h3>🚀 Mini Projects</h3><button class="icon-btn" onclick="closeModal()">✕</button></div><p class="tiny muted">Project khó dần theo trình độ. Hoàn thành sẽ nhận XP lớn hơn bài học.</p><div class="lesson-list">${projects.map(p=>{const unlocked=state.userLevel>=p.minLevel||progressPercent()>=p.minLevel*12;const done=state.savedProjects.includes(p.id);return `<button class="lesson-item ${unlocked?'':'locked'}" ${unlocked?'':'disabled'} data-project="${p.id}"><div class="number">${done?'✓':'🚀'}</div><div><strong>${escapeHtml(p.name)}</strong><div class="tiny muted">${escapeHtml(p.desc)}</div></div><span class="badge">${done?'Done':p.xp+' XP'}</span></button>`}).join('')}</div>`);
+  document.querySelectorAll('[data-project]').forEach(b=>b.onclick=()=>openProject(b.dataset.project));
+}
+function openProject(id){
+  const p=projects.find(x=>x.id===id); if(!p)return;
+  showModal(`<div class="between"><h3>🚀 ${escapeHtml(p.name)}</h3><button class="icon-btn" onclick="closeModal()">✕</button></div><p class="muted">${escapeHtml(p.desc)}</p><textarea id="projectCode" class="editor" spellcheck="false" style="min-height:320px">${escapeHtml(p.starter)}</textarea><div class="toolbar" style="margin-top:9px"><button class="btn blue" id="checkProject">🤖 KIỂM TRA PROJECT</button><button class="btn" id="previewProject">▶ PREVIEW</button><button class="btn success" id="finishProject">🏆 HOÀN THÀNH</button></div><div id="projectResult"></div><iframe id="projectPreview" class="preview-frame" sandbox="allow-forms" style="margin-top:10px;height:250px"></iframe>`);
+  document.getElementById('checkProject').onclick=()=>{const c=document.getElementById('projectCode').value;const tests=(/<h1\\b/i.test(c)&&/<p\\b/i.test(c)&&(/<ul\\b/i.test(c)||/<section\\b/i.test(c)));document.getElementById('projectResult').className='result '+(tests?'ok':'bad');document.getElementById('projectResult').innerHTML=tests?'<strong>✅ Project đạt kiểm tra cơ bản.</strong><div class="tiny muted">Hãy tiếp tục thêm semantic HTML, accessibility và nội dung thực tế.</div>':'<strong>❌ Project chưa đạt.</strong><div class="tiny muted">Thêm cấu trúc HTML nội dung chính phù hợp với yêu cầu project.</div>'};
+  document.getElementById('previewProject').onclick=()=>document.getElementById('projectPreview').srcdoc=document.getElementById('projectCode').value;
+  document.getElementById('finishProject').onclick=()=>{if(!state.savedProjects.includes(id)){state.savedProjects.push(id);updateStreak();saveState();addXP(p.xp,'Hoàn thành project');}else toast('Project này đã hoàn thành.');};
+}
+
+function startStudyTimer(){
+  let last=Date.now();
+  setInterval(()=>{if(document.visibilityState==='visible'&&currentView==='learning'&&currentLesson){const now=Date.now();if(now-last>=30000){state.studyMinutes+=1;last=now;saveState();}}else last=Date.now()},1000);
+}
+document.getElementById('startBtn').onclick=startApp;
+document.getElementById('themeBtn').onclick=()=>{state.settings.theme=state.settings.theme==='light'?'dark':'light';saveState();renderShell()};
+document.getElementById('resetQuick').onclick=()=>resetAll();
+document.getElementById('mobileMenu').onclick=()=>{const sb=document.querySelector('.sidebar');sb.style.display=sb.style.display==='flex'?'none':'flex'};
+document.getElementById('modalBackdrop').addEventListener('click',e=>{if(e.target.id==='modalBackdrop')closeModal()});
+
+loadState();
+selectedLevel=state.userLevel||1;
+renderWelcome();
+initNav();
+if(state.initialized){document.getElementById('welcome').style.display='none';document.getElementById('app').style.display='flex';document.documentElement.style.fontSize=(state.settings.fontSize||16)+'px';renderShell();navigate('dashboard');}
+startStudyTimer();
+setInterval(maybeNotifySchedule,60000);
+maybeNotifySchedule();
+
+})();
+</script>
+</body>
+</html>
+'''
+
+# Fix an accidental JavaScript expression in the generated resource rendering.
+html = html.replace("new URL(r.url===' #'?location.href:r.url,location.href).hostname", "new URL(r.url===' #' ? location.href : r.url, location.href).hostname")
+# The source line above still has '#' placeholder on one resource. Correct it.
+html = html.replace("url:'#'}", "url:'https://html.spec.whatwg.org/'}")
+# Ensure the HTML is saved.
+path = Path("/mnt/data/html_learning_ai.html")
+path.write_text(html, encoding="utf-8")
+
+# Basic structural checks.
+checks = {
+    "doctype": html.lstrip().lower().startswith("<!doctype html>"),
+    "closing_html": html.rstrip().lower().endswith("</html>"),
+    "script": html.count("<script>") == 1 and html.count("</script>") == 1,
+    "localStorage": "localStorage" in html,
+    "playground": "HTML CODE PLAYGROUND" in html and "sandbox" in html,
+    "quiz": "submitQuiz" in html,
+    "schedule": "STUDY SCHEDULE" in html,
+    "resources": "RESOURCE LIBRARY" in html,
+    "achievements": "ACHIEVEMENTS" in html
+}
+print("Created:", path)
+print("Size:", path.stat().st_size, "bytes")
+print("Checks:", checks)
+
+# Extract JS and syntax-check with Node.js if available.
+m = re.search(r"<script>([\s\S]*?)</script>", html)
+if m and shutil := __import__("shutil"):
+    node = shutil.which("node")
+    if node:
+        js_path = Path("/mnt/data/_html_lab_check.js")
+        js_path.write_text(m.group(1), encoding="utf-8")
+        proc = subprocess.run([node, "--check", str(js_path)], capture_output=True, text=True)
+        print("Node syntax check:", "PASS" if proc.returncode == 0 else "FAIL")
+        if proc.returncode != 0:
+            print(proc.stderr[:4000])
+        js_path.unlink(missing_ok=True)
+    else:
+        print("Node syntax check: skipped (Node.js not installed)")
